@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %highlight(%-5level) %logger{36} - %blue(%msg) %red(%marker) %n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Netty loglarını INFO seviyesine çıkar -->
+    <logger name="io.netty" level="INFO"/>
+
+    <!-- HiveMQ loglarını DEBUG seviyesinde tut -->
+    <logger name="com.hivemq" level="DEBUG"/>
+
+    <!-- Kendi uygulamamızın loglarını DEBUG seviyesinde tut -->
+    <logger name="com.hubbox" level="DEBUG"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>
