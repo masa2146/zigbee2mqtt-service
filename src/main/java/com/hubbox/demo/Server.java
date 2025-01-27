@@ -2,12 +2,12 @@ package com.hubbox.demo;
 
 import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import com.hubbox.demo.controller.DeviceCategoryController;
 import com.hubbox.demo.controller.DeviceCommandController;
 import com.hubbox.demo.controller.DeviceController;
-import com.hubbox.demo.controller.DeviceModelController;
-import com.hubbox.demo.dependecy.DependencyContainer;
-import com.hubbox.demo.dependecy.DependencyManager;
 import com.hubbox.demo.dto.response.ErrorResponse;
 import com.hubbox.demo.exceptions.BaseRuntimeException;
 import com.hubbox.demo.exceptions.RecordNotFoundException;
@@ -17,37 +17,46 @@ import io.javalin.openapi.plugin.swagger.SwaggerPlugin;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Singleton
 public class Server {
     private final Javalin app;
     private final int port;
-    private final DependencyManager dependencyManager;
+    private final DeviceCategoryController categoryController;
+    private final DeviceCommandController commandController;
+    private final DeviceController deviceController;
 
-
-    public Server(int port) {
+    @Inject
+    public Server(
+        @Named("serverPort") int port,
+        DeviceCategoryController categoryController,
+        DeviceCommandController commandController,
+        DeviceController deviceController) {
         this.port = port;
-        this.dependencyManager = DependencyManager.getInstance();
+        this.categoryController = categoryController;
+        this.commandController = commandController;
+        this.deviceController = deviceController;
 
-        this.app = Javalin.create(config -> {
+        this.app = configureJavalin();
+        configureRoutes();
+        configureExceptionHandling();
+    }
+
+    private Javalin configureJavalin() {
+        return Javalin.create(config -> {
             config.registerPlugin(configureOpenApi());
             config.registerPlugin(new SwaggerPlugin(swaggerConfig -> {
                 swaggerConfig.setDocumentationPath("/openapi-docs");
                 swaggerConfig.setUiPath("/swagger-ui");
             }));
 
-            // Base path for all routes
             config.router.contextPath = CONTEXT_PATH;
-
             config.bundledPlugins.enableCors(cors -> cors.addRule(it -> {
                 it.anyHost();
                 it.exposeHeader("Content-Type");
             }));
             config.http.defaultContentType = "application/json";
-
-            // Error handling
             config.bundledPlugins.enableDevLogging();
         });
-
-        configureDependencies();
     }
 
     private OpenApiPlugin configureOpenApi() {
@@ -61,30 +70,10 @@ public class Server {
         });
     }
 
-    private void configureDependencies() {
-        DependencyContainer container = dependencyManager.getContainer();
-
-        // Initialize controllers
-        DeviceCategoryController categoryController =
-            new DeviceCategoryController(container.getCategoryService());
-
-        DeviceModelController modelController =
-            new DeviceModelController(container.getModelService());
-
-        DeviceCommandController commandController =
-            new DeviceCommandController(container.getCommandService());
-
-        DeviceController deviceController =
-            new DeviceController(container.getDeviceService());
-
-        // Register routes
+    private void configureRoutes() {
         categoryController.registerRoutes(app);
-        modelController.registerRoutes(app);
         commandController.registerRoutes(app);
         deviceController.registerRoutes(app);
-
-        // Exception handling
-        configureExceptionHandling();
     }
 
     private void configureExceptionHandling() {

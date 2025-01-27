@@ -2,6 +2,8 @@ package com.hubbox.demo.controller;
 
 import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.hubbox.demo.dto.request.DeviceCategoryCreateRequest;
 import com.hubbox.demo.dto.response.DeviceCategoryResponse;
 import com.hubbox.demo.service.DeviceCategoryService;
@@ -17,9 +19,11 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Singleton
 public class DeviceCategoryController extends AbstractController {
     private final DeviceCategoryService categoryService;
 
+    @Inject
     public DeviceCategoryController(DeviceCategoryService categoryService) {
         super("categories");
         this.categoryService = categoryService;

@@ -1,26 +1,17 @@
 package com.hubbox.demo.config;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import lombok.Getter;
 
+@Singleton
+@Getter
 public class ConfigurationLoaderManager {
-    private static ConfigurationLoaderManager configurationLoaderManager;
 
-    @Getter
-    private final MqttConfiguration mqttConfiguration;
-
-    @Getter
     private final AppConfig appConfig;
 
-    private ConfigurationLoaderManager() {
-        ConfigurationManager instance = ConfigurationManager.getInstance();
-        appConfig = instance.getConfig();
-        mqttConfiguration = new MqttConfiguration(instance.getConfig().mqtt());
-    }
-
-    public static ConfigurationLoaderManager getInstance() {
-        if (configurationLoaderManager == null) {
-            configurationLoaderManager = new ConfigurationLoaderManager();
-        }
-        return configurationLoaderManager;
+    @Inject
+    public ConfigurationLoaderManager(ConfigurationManager configManager) {
+        this.appConfig = configManager.getConfig();
     }
 }

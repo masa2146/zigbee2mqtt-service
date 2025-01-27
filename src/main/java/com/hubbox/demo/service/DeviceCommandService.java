@@ -3,7 +3,7 @@ package com.hubbox.demo.service;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.hubbox.demo.dto.request.DeviceCommandCreateRequest;
 import com.hubbox.demo.dto.response.DeviceCommandResponse;
-import com.hubbox.demo.entities.DeviceCommand;
+import com.hubbox.demo.entities.DeviceCommandEntity;
 import com.hubbox.demo.exceptions.BaseRuntimeException;
 import com.hubbox.demo.mapper.DeviceCommandMapper;
 import com.hubbox.demo.repository.DeviceCommandRepository;
@@ -11,25 +11,30 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor
+@Singleton
 public class DeviceCommandService {
     private final DeviceCommandRepository commandRepository;
     private final DeviceCommandMapper mapper;
-    private final DeviceModelService modelService;
-    private final Cache<String, List<DeviceCommand>> commandCache;
+    private final Cache<String, List<DeviceCommandEntity>> commandCache;
+
+    @Inject
+    public DeviceCommandService(DeviceCommandRepository commandRepository, DeviceCommandMapper mapper,
+                                Cache<String, List<DeviceCommandEntity>> commandCache) {
+        this.commandRepository = commandRepository;
+        this.mapper = mapper;
+        this.commandCache = commandCache;
+    }
 
 
     public DeviceCommandResponse createCommand(DeviceCommandCreateRequest request) {
         try {
-            // Check if model exists
-            modelService.getModelByModelId(request.modelId());
 
-            DeviceCommand command = mapper.toEntity(request);
+            DeviceCommandEntity command = mapper.toEntity(request);
             Long id = commandRepository.create(command);
             command.setId(id);
 
@@ -46,15 +51,14 @@ public class DeviceCommandService {
     public List<DeviceCommandResponse> getCommandsByModel(String modelId) {
         try {
             return Objects.requireNonNull(commandCache.get(modelId, key -> getCommandsFromRepository(modelId))).stream()
-                .map(mapper::toResponse)
-                .collect(Collectors.toList());
+                .map(mapper::toResponse).toList();
         } catch (Exception e) {
             log.error("Error getting commands for model: {}", modelId, e);
             return Collections.emptyList();
         }
     }
 
-    private List<DeviceCommand> getCommandsFromRepository(String modelId) {
+    private List<DeviceCommandEntity> getCommandsFromRepository(String modelId) {
         try {
             return commandRepository.findByModelId(modelId);
         } catch (SQLException e) {

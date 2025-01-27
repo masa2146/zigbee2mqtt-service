@@ -2,6 +2,8 @@ package com.hubbox.demo.controller;
 
 import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.hubbox.demo.dto.request.SendDeviceCommandRequest;
 import com.hubbox.demo.dto.response.DeviceResponse;
 import com.hubbox.demo.exceptions.DeviceNotFoundException;
@@ -18,9 +20,11 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Singleton
 public class DeviceController extends AbstractController {
     private final DeviceService deviceService;
 
+    @Inject
     public DeviceController(DeviceService deviceService) {
         super("devices");
         this.deviceService = deviceService;

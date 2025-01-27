@@ -3,35 +3,27 @@ package com.hubbox.demo.config;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.hubbox.demo.exceptions.CacheNotFoundException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Singleton
 public class CacheManager {
-    private static AtomicReference<CacheManager> instance;
-    private static final Object LOCK = new Object();
-
     private final Map<String, Cache<?, ?>> caches;
     private final CacheConfig cacheConfig;
 
-    private CacheManager() {
-        this.cacheConfig = ConfigurationManager.getInstance().getConfig().cache();
+    @Inject
+    private CacheManager(CacheConfig cacheConfig) {
+        this.cacheConfig = cacheConfig;
         this.caches = new ConcurrentHashMap<>();
         initializeCaches();
     }
 
-    public static CacheManager getInstance() {
-        if (instance == null) {
-            synchronized (LOCK) {
-                instance = new AtomicReference<>(new CacheManager());
-            }
-        }
-        return instance.get();
-    }
 
     private void initializeCaches() {
         if (cacheConfig == null || cacheConfig.caches() == null) {

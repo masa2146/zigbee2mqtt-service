@@ -1,7 +1,8 @@
 package com.hubbox.demo.repository;
 
+import com.google.inject.Singleton;
 import com.hubbox.demo.config.DatabaseConnectionManager;
-import com.hubbox.demo.entities.DeviceCategory;
+import com.hubbox.demo.entities.DeviceCategoryEntity;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -13,10 +14,11 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Singleton
 public class DeviceCategoryRepository {
     private static final String TABLE_NAME = "device_categories";
 
-    public Long create(DeviceCategory category) throws SQLException {
+    public Long create(DeviceCategoryEntity category) throws SQLException {
         String sql = "INSERT INTO " + TABLE_NAME + " (category_name, description) VALUES (?, ?)";
 
         try (Connection conn = DatabaseConnectionManager.getConnection();
@@ -37,7 +39,7 @@ public class DeviceCategoryRepository {
         }
     }
 
-    public Optional<DeviceCategory> findById(Long id) throws SQLException {
+    public Optional<DeviceCategoryEntity> findById(Long id) throws SQLException {
         String sql = "SELECT * FROM " + TABLE_NAME + " WHERE id = ?";
 
         try (Connection conn = DatabaseConnectionManager.getConnection();
@@ -54,9 +56,9 @@ public class DeviceCategoryRepository {
         }
     }
 
-    public List<DeviceCategory> findAll() throws SQLException {
+    public List<DeviceCategoryEntity> findAll() throws SQLException {
         String sql = "SELECT * FROM " + TABLE_NAME;
-        List<DeviceCategory> categories = new ArrayList<>();
+        List<DeviceCategoryEntity> categories = new ArrayList<>();
 
         try (Connection conn = DatabaseConnectionManager.getConnection();
              Statement stmt = conn.createStatement();
@@ -70,7 +72,7 @@ public class DeviceCategoryRepository {
         return categories;
     }
 
-    public void update(Long id, DeviceCategory category) throws SQLException {
+    public void update(Long id, DeviceCategoryEntity category) throws SQLException {
         String sql = "UPDATE " + TABLE_NAME + " SET category_name = ?, description = ? WHERE id = ?";
 
         try (Connection conn = DatabaseConnectionManager.getConnection();
@@ -97,11 +99,11 @@ public class DeviceCategoryRepository {
         }
     }
 
-    private DeviceCategory mapToCategory(ResultSet rs) throws SQLException {
-        return DeviceCategory.builder()
-            .id(rs.getLong("id"))
-            .categoryName(rs.getString("category_name"))
-            .description(rs.getString("description"))
-            .build();
+    private DeviceCategoryEntity mapToCategory(ResultSet rs) throws SQLException {
+        DeviceCategoryEntity category = new DeviceCategoryEntity();
+        category.setId(rs.getLong("id"));
+        category.setCategoryName(rs.getString("category_name"));
+        category.setDescription(rs.getString("description"));
+        return category;
     }
 }

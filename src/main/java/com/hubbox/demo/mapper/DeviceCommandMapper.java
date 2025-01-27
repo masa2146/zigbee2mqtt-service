@@ -3,7 +3,7 @@ package com.hubbox.demo.mapper;
 import com.hubbox.demo.dto.request.DeviceCommandCreateRequest;
 import com.hubbox.demo.dto.request.DeviceModelUpdateRequest;
 import com.hubbox.demo.dto.response.DeviceCommandResponse;
-import com.hubbox.demo.entities.DeviceCommand;
+import com.hubbox.demo.entities.DeviceCommandEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.factory.Mappers;
@@ -12,7 +12,7 @@ import org.mapstruct.factory.Mappers;
 public interface DeviceCommandMapper {
     DeviceCommandMapper INSTANCE = Mappers.getMapper(DeviceCommandMapper.class);
 
-    DeviceCommandResponse toResponse(DeviceCommand command);
-    DeviceCommand toEntity(DeviceCommandCreateRequest request);
-    void updateEntityFromRequest(DeviceModelUpdateRequest request, @MappingTarget DeviceCommand command);
+    DeviceCommandResponse toResponse(DeviceCommandEntity command);
+    DeviceCommandEntity toEntity(DeviceCommandCreateRequest request);
+    void updateEntityFromRequest(DeviceModelUpdateRequest request, @MappingTarget DeviceCommandEntity command);
 }

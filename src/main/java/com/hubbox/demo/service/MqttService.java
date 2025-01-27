@@ -1,5 +1,7 @@
 package com.hubbox.demo.service;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
@@ -12,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Singleton
 public class MqttService {
 
     private final Mqtt3AsyncClient client;
@@ -20,6 +23,7 @@ public class MqttService {
     private final Map<String, TopicMessageListener> topicListeners = new ConcurrentHashMap<>();
     private boolean isSubscribed = false;
 
+    @Inject
     public MqttService(Mqtt3AsyncClient client, MqttConfig mqttConfig) {
         this.client = client;
         this.mqttConfig = mqttConfig;

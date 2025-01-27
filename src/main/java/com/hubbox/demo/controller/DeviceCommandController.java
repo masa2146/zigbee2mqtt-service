@@ -2,6 +2,8 @@ package com.hubbox.demo.controller;
 
 import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.hubbox.demo.dto.request.DeviceCommandCreateRequest;
 import com.hubbox.demo.dto.response.DeviceCommandResponse;
 import com.hubbox.demo.service.DeviceCommandService;
@@ -17,9 +19,11 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Singleton
 public class DeviceCommandController extends AbstractController {
     private final DeviceCommandService commandService;
 
+    @Inject
     public DeviceCommandController(DeviceCommandService commandService) {
         super("commands");
         this.commandService = commandService;

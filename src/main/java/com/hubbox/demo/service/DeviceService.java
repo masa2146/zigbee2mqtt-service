@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.hubbox.demo.dto.request.SendDeviceCommandRequest;
 import com.hubbox.demo.dto.response.DeviceResponse;
 import com.hubbox.demo.exceptions.BaseRuntimeException;
@@ -16,12 +18,14 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Singleton
 public class DeviceService implements TopicMessageListener {
     private final MqttService mqttService;
     private final ObjectMapper objectMapper;
     private final DeviceCommandService commandService;
     private final List<DeviceResponse> deviceList = new ArrayList<>();
 
+    @Inject
     public DeviceService(MqttService mqttService, ObjectMapper objectMapper, DeviceCommandService commandService) {
         this.mqttService = mqttService;
         this.objectMapper = objectMapper;
