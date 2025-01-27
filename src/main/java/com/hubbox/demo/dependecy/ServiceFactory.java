@@ -41,8 +41,8 @@ public class ServiceFactory {
         );
     }
 
-    public DeviceService createDeviceService(MqttService mqttService) {
-        return new DeviceService(mqttService, objectMapper);
+    public DeviceService createDeviceService(MqttService mqttService, DeviceCommandService commandService) {
+        return new DeviceService(mqttService, objectMapper, commandService);
     }
 
     public DeviceCategoryService createCategoryService(

@@ -2,6 +2,7 @@ package com.hubbox.demo.config;
 
 public record AppConfig(
     MqttConfig mqtt,
-    CacheConfig cache
+    CacheConfig cache,
+    String contextPath
 ) {
 }

@@ -1,6 +1,6 @@
 package com.hubbox.demo.exceptions;
 
-public class ConfigurationException extends RuntimeException {
+public class ConfigurationException extends BaseRuntimeException {
 
     public ConfigurationException(String message) {
         super(message);

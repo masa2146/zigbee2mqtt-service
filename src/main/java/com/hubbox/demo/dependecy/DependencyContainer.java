@@ -105,13 +105,11 @@ public class DependencyContainer {
                 objectMapper, configManager, cacheManager);
 
             this.mqttService = serviceFactory.createMqttService();
-            this.deviceService = serviceFactory.createDeviceService(mqttService);
-            this.categoryService = serviceFactory.createCategoryService(
-                categoryRepository, categoryMapper);
-            this.modelService = serviceFactory.createModelService(
-                modelRepository, modelMapper, categoryService);
-            this.commandService = serviceFactory.createCommandService(
-                commandRepository, commandMapper, modelService);
+            this.categoryService = serviceFactory.createCategoryService(categoryRepository, categoryMapper);
+            this.modelService = serviceFactory.createModelService(modelRepository, modelMapper, categoryService);
+            this.commandService = serviceFactory.createCommandService(commandRepository, commandMapper, modelService);
+            this.deviceService = serviceFactory.createDeviceService(mqttService, commandService);
+
         }
 
         public DependencyContainer build() {

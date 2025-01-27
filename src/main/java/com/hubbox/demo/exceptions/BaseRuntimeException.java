@@ -1,14 +1,16 @@
 package com.hubbox.demo.exceptions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 public class BaseRuntimeException extends RuntimeException {
 
-    public BaseRuntimeException(JsonProcessingException e) {
+    public BaseRuntimeException(Throwable e) {
         super(e);
     }
 
-    public BaseRuntimeException(String message, Exception e) {
+    public BaseRuntimeException(String message, Throwable e) {
         super(message, e);
+    }
+
+    public BaseRuntimeException(String message) {
+        super(message);
     }
 }

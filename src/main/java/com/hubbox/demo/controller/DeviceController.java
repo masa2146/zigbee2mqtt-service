@@ -1,12 +1,11 @@
 package com.hubbox.demo.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hubbox.demo.dto.request.DeviceCommandCreateRequest;
-import com.hubbox.demo.dto.request.SendCommandRequest;
-import com.hubbox.demo.dto.response.DeviceCommandResponse;
-import com.hubbox.demo.dto.response.ErrorResponse;
-import com.hubbox.demo.service.DeviceCommandService;
+import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
+
+import com.hubbox.demo.dto.request.SendDeviceCommandRequest;
+import com.hubbox.demo.dto.response.DeviceResponse;
+import com.hubbox.demo.exceptions.DeviceNotFoundException;
+import com.hubbox.demo.service.DeviceService;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.openapi.HttpMethod;
@@ -19,124 +18,87 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class DeviceController {
-    private final DeviceCommandService commandService;
-    private final ObjectMapper objectMapper;
+public class DeviceController extends AbstractController {
+    private final DeviceService deviceService;
 
-    public DeviceController(DeviceCommandService commandService, ObjectMapper objectMapper) {
-        this.commandService = commandService;
-        this.objectMapper = objectMapper;
+    public DeviceController(DeviceService deviceService) {
+        super("devices");
+        this.deviceService = deviceService;
     }
 
+    @Override
     public void registerRoutes(Javalin app) {
-        app.get("/api/devices/{modelId}/commands", this::getCommandsByModel);
-        app.post("/api/devices/commands", this::createCommand);
-        app.post("/api/devices/{deviceId}/send-command", this::sendCommand);
-        app.exception(Exception.class, this::handleException);
+        app.get(buildPath(), this::getAllDevices);
+        app.get(buildPath("{deviceName}"), this::getDevice);
+        app.post(buildPath("{deviceName}/command"), this::sendCommand);
     }
 
     @OpenApi(
-        path = "/api/devices/{modelId}/commands",
-        methods = HttpMethod.GET,
-        summary = "Get commands by model ID",
-        operationId = "getCommandsByModel",
-        tags = {"Device Commands"},
-        pathParams = {
-            @OpenApiParam(
-                name = "modelId",
-                description = "The model ID of the device",
-                required = true,
-                type = String.class
-            )
-        },
+        path = CONTEXT_PATH + "/devices",
+        methods = {HttpMethod.GET},
+        summary = "Get all devices",
+        operationId = "getAllDevices",
+        tags = {"Devices"},
         responses = {
             @OpenApiResponse(
                 status = "200",
-                description = "List of commands for the device model",
-                content = {@OpenApiContent(from = DeviceCommandResponse[].class)}
-            ),
-            @OpenApiResponse(
-                status = "404",
-                description = "Model not found"
+                content = {@OpenApiContent(from = DeviceResponse[].class)}
             )
         }
     )
-    private void getCommandsByModel(Context ctx) {
-        String modelId = ctx.pathParam("modelId");
-        List<DeviceCommandResponse> commands = commandService.getCommandsByModel(modelId);
-        ctx.json(commands);
+    private void getAllDevices(Context ctx) {
+        List<DeviceResponse> devices = deviceService.getAllDevices();
+        ctx.json(devices);
     }
 
     @OpenApi(
-        path = "/api/devices/commands",
-        methods = HttpMethod.POST,
-        summary = "Create a new device command",
-        operationId = "createCommand",
-        tags = {"Device Commands"},
-        requestBody = @OpenApiRequestBody(
-            content = {@OpenApiContent(from = DeviceCommandCreateRequest.class)}
-        ),
+        path = CONTEXT_PATH + "/devices/{deviceName}",
+        methods = {HttpMethod.GET},
+        summary = "Get device by name",
+        operationId = "getDevice",
+        tags = {"Devices"},
+        pathParams = {
+            @OpenApiParam(name = "deviceName", description = "Name of the device")
+        },
         responses = {
-            @OpenApiResponse(
-                status = "201",
-                description = "Command created successfully",
-                content = {@OpenApiContent(from = DeviceCommandResponse.class)}
-            ),
-            @OpenApiResponse(
-                status = "400",
-                description = "Invalid request"
-            )
+            @OpenApiResponse(status = "200", content = {@OpenApiContent(from = DeviceResponse.class)}),
+            @OpenApiResponse(status = "404", description = "Device not found")
         }
     )
-    private void createCommand(Context ctx) throws JsonProcessingException {
-        DeviceCommandCreateRequest request = objectMapper.readValue(
-            ctx.body(), DeviceCommandCreateRequest.class);
-        DeviceCommandResponse response = commandService.createCommand(request);
-        ctx.status(201).json(response);
+    private void getDevice(Context ctx) throws DeviceNotFoundException {
+        String deviceName = ctx.pathParam("deviceName");
+        DeviceResponse device = deviceService.getDeviceById(deviceName);
+        ctx.json(device);
     }
 
     @OpenApi(
-        path = "/api/devices/{deviceId}/send-command",
-        methods = HttpMethod.POST,
+        path = CONTEXT_PATH + "/devices/{deviceName}/command",
+        methods = {HttpMethod.POST},
         summary = "Send command to device",
         operationId = "sendCommand",
-        tags = {"Device Commands"},
+        tags = {"Devices"},
         pathParams = {
-            @OpenApiParam(
-                name = "deviceId",
-                description = "The ID of the target device",
-                required = true,
-                type = String.class
-            )
+            @OpenApiParam(name = "deviceName", description = "Name of the device")
         },
         requestBody = @OpenApiRequestBody(
-            content = {@OpenApiContent(from = SendCommandRequest.class)}
+            content = {@OpenApiContent(from = SendDeviceCommandRequest.class)}
         ),
         responses = {
-            @OpenApiResponse(
-                status = "200",
-                description = "Command sent successfully"
-            ),
-            @OpenApiResponse(
-                status = "404",
-                description = "Device not found"
-            ),
-            @OpenApiResponse(
-                status = "400",
-                description = "Invalid command"
-            )
+            @OpenApiResponse(status = "200", description = "Command sent successfully"),
+            @OpenApiResponse(status = "404", description = "Device not found"),
+            @OpenApiResponse(status = "400", description = "Invalid command")
         }
     )
-    private void sendCommand(Context ctx) throws JsonProcessingException {
-        String deviceId = ctx.pathParam("deviceId");
-        SendCommandRequest request = objectMapper.readValue(ctx.body(), SendCommandRequest.class);
-        String commandTemplate = commandService.getCommandTemplate(request.modelId(), request.command());
-        ctx.status(200).result("Command sent successfully");
-    }
+    private void sendCommand(Context ctx) {
+        String deviceName = ctx.pathParam("deviceName");
+        SendDeviceCommandRequest request = ctx.bodyAsClass(SendDeviceCommandRequest.class);
 
-    private void handleException(Exception e, Context ctx) {
-        log.error("Error handling request", e);
-        ErrorResponse error = new ErrorResponse(500, "Internal Server Error", e.getMessage());
-        ctx.status(500).json(error);
+        deviceService.sendCommandToDevice(new SendDeviceCommandRequest(
+            deviceName,
+            request.commandName(),
+            request.parameters()
+        ));
+
+        ctx.status(200).result("Command sent successfully");
     }
 }
