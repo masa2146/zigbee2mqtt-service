@@ -1,16 +1,25 @@
 package com.hubbox.demo.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.hubbox.demo.dto.request.DeviceCommandCreateRequest;
+import com.hubbox.demo.dto.request.DeviceCommandUpdateRequest;
+import com.hubbox.demo.dto.request.SendDeviceCommandRequest;
 import com.hubbox.demo.dto.response.DeviceCommandResponse;
+import com.hubbox.demo.dto.response.DeviceResponse;
 import com.hubbox.demo.entities.DeviceCommandEntity;
 import com.hubbox.demo.exceptions.BaseRuntimeException;
+import com.hubbox.demo.exceptions.CommandExecutionException;
 import com.hubbox.demo.mapper.DeviceCommandMapper;
 import com.hubbox.demo.repository.DeviceCommandRepository;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
@@ -20,25 +29,30 @@ import lombok.extern.slf4j.Slf4j;
 public class DeviceCommandService {
     private final DeviceCommandRepository commandRepository;
     private final DeviceCommandMapper mapper;
+    private final MqttService mqttService;
+    private final DeviceService deviceService;
+    private final ObjectMapper objectMapper;
     private final Cache<String, List<DeviceCommandEntity>> commandCache;
 
     @Inject
-    public DeviceCommandService(DeviceCommandRepository commandRepository, DeviceCommandMapper mapper,
+    public DeviceCommandService(DeviceCommandRepository commandRepository,
+                                DeviceCommandMapper mapper, MqttService mqttService,
+                                DeviceService deviceService, ObjectMapper objectMapper,
                                 Cache<String, List<DeviceCommandEntity>> commandCache) {
         this.commandRepository = commandRepository;
         this.mapper = mapper;
+        this.mqttService = mqttService;
+        this.deviceService = deviceService;
+        this.objectMapper = objectMapper;
         this.commandCache = commandCache;
     }
 
-
     public DeviceCommandResponse createCommand(DeviceCommandCreateRequest request) {
         try {
-
             DeviceCommandEntity command = mapper.toEntity(request);
             Long id = commandRepository.create(command);
             command.setId(id);
 
-            // Invalidate cache
             commandCache.invalidate(request.modelId());
 
             return mapper.toResponse(command);
@@ -48,22 +62,63 @@ public class DeviceCommandService {
         }
     }
 
+    public DeviceCommandResponse getCommand(Long id) {
+        try {
+            DeviceCommandEntity commandById = findCommandById(id);
+            return mapper.toResponse(commandById);
+        } catch (SQLException e) {
+            log.error("Error getting command", e);
+            throw new BaseRuntimeException("Failed to get command", e);
+        }
+    }
+
+    public List<DeviceCommandResponse> getAllCommands() {
+        try {
+            return commandRepository.findAll().stream().map(mapper::toResponse).toList();
+        } catch (SQLException e) {
+            log.error("Error getting commands", e);
+            throw new BaseRuntimeException("Failed to get commands", e);
+        }
+    }
+
     public List<DeviceCommandResponse> getCommandsByModel(String modelId) {
         try {
-            return Objects.requireNonNull(commandCache.get(modelId, key -> getCommandsFromRepository(modelId))).stream()
-                .map(mapper::toResponse).toList();
+            List<DeviceCommandEntity> cachedCommands = commandCache.get(modelId, key ->
+                Optional.ofNullable(findCommandsByModelId(modelId))
+                    .filter(list -> !list.isEmpty())
+                    .orElse(Collections.emptyList())
+            );
+
+            return cachedCommands.stream().map(mapper::toResponse).toList();
         } catch (Exception e) {
             log.error("Error getting commands for model: {}", modelId, e);
             return Collections.emptyList();
         }
     }
 
-    private List<DeviceCommandEntity> getCommandsFromRepository(String modelId) {
+    public DeviceCommandResponse updateCommand(Long id, DeviceCommandUpdateRequest request) {
         try {
-            return commandRepository.findByModelId(modelId);
+            DeviceCommandEntity existingCommand = findCommandById(id);
+
+            mapper.updateEntityFromRequest(request, existingCommand);
+            commandRepository.update(id, existingCommand);
+            commandCache.invalidate(existingCommand.getModelId());
+
+            return mapper.toResponse(existingCommand);
         } catch (SQLException e) {
-            log.error("Error getting commands for model: {}", modelId, e);
-            return Collections.emptyList();
+            log.error("Error updating command", e);
+            throw new BaseRuntimeException("Failed to update command", e);
+        }
+    }
+
+    public void deleteCommand(Long id) {
+        try {
+            DeviceCommandEntity existingCommand = findCommandById(id);
+            commandRepository.delete(id);
+            commandCache.invalidate(existingCommand.getModelId());
+        } catch (SQLException e) {
+            log.error("Error deleting command", e);
+            throw new BaseRuntimeException("Failed to delete command", e);
         }
     }
 
@@ -74,5 +129,69 @@ public class DeviceCommandService {
             .map(DeviceCommandResponse::commandTemplate)
             .orElseThrow(() -> new RuntimeException(
                 "Command not found: " + commandName + " for model: " + modelId));
+    }
+
+    public void executeCommand(SendDeviceCommandRequest request) {
+        try {
+            DeviceResponse device = deviceService.getDeviceById(request.deviceName());
+
+            String modelId = device.modelId();
+            String commandTemplate = getCommandTemplate(modelId, request.commandName());
+
+            String finalCommand = replaceCommandParameters(commandTemplate, request.parameters());
+
+            String topic = String.format("%s/set", device.friendlyName());
+            log.debug("Sending command to device: {} on topic: {}, command: {}",
+                request.deviceName(), topic, finalCommand);
+
+            mqttService.sendCommand(topic, finalCommand);
+
+        } catch (Exception e) {
+            log.error("Error sending command to device: {}", request.deviceName(), e);
+            throw new CommandExecutionException("Failed to send command to device", e);
+        }
+    }
+
+    private String replaceCommandParameters(String template, Map<String, Object> parameters) {
+        if (parameters == null || parameters.isEmpty()) {
+            return template;
+        }
+
+        try {
+            JsonNode templateNode = objectMapper.readTree(template);
+            ObjectNode commandNode = templateNode.deepCopy();
+
+            parameters.forEach((key, value) -> {
+                if (commandNode.has(key)) {
+                    if (value instanceof Number numVal) {
+                        commandNode.put(key, (numVal.doubleValue()));
+                    } else if (value instanceof Boolean boolVal) {
+                        commandNode.put(key, boolVal);
+                    } else {
+                        commandNode.put(key, value.toString());
+                    }
+                }
+            });
+
+            return objectMapper.writeValueAsString(commandNode);
+        } catch (JsonProcessingException e) {
+            log.error("Error processing command template", e);
+            throw new CommandExecutionException("Failed to process command template", e);
+        }
+    }
+
+
+    private List<DeviceCommandEntity> findCommandsByModelId(String modelId) {
+        try {
+            return commandRepository.findByModelId(modelId);
+        } catch (SQLException e) {
+            log.error("Error getting commands for model: {}", modelId, e);
+            return Collections.emptyList();
+        }
+    }
+
+    private DeviceCommandEntity findCommandById(Long id) throws SQLException {
+        return commandRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Command not found: " + id));
     }
 }

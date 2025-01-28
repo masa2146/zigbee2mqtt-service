@@ -3,6 +3,7 @@ package com.hubbox.demo.service;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubbox.demo.dto.request.DeviceCategoryCreateRequest;
+import com.hubbox.demo.dto.request.DeviceCategoryUpdateRequest;
 import com.hubbox.demo.dto.response.DeviceCategoryResponse;
 import com.hubbox.demo.entities.DeviceCategoryEntity;
 import com.hubbox.demo.exceptions.BaseRuntimeException;
@@ -24,7 +25,6 @@ public class DeviceCategoryService {
         this.mapper = mapper;
     }
 
-
     public DeviceCategoryResponse createCategory(DeviceCategoryCreateRequest request) {
         try {
             DeviceCategoryEntity category = mapper.toEntity(request);
@@ -39,9 +39,8 @@ public class DeviceCategoryService {
 
     public DeviceCategoryResponse getCategory(Long id) {
         try {
-            return categoryRepository.findById(id)
-                .map(mapper::toResponse)
-                .orElseThrow(() -> new RuntimeException("Category not found: " + id));
+            DeviceCategoryEntity categoryById = findCategoryById(id);
+            return mapper.toResponse(categoryById);
         } catch (SQLException e) {
             log.error("Error getting category", e);
             throw new BaseRuntimeException("Failed to get category", e);
@@ -50,10 +49,39 @@ public class DeviceCategoryService {
 
     public List<DeviceCategoryResponse> getAllCategories() {
         try {
-            return categoryRepository.findAll().stream().map(mapper::toResponse).toList();
+            return categoryRepository.findAll().stream()
+                .map(mapper::toResponse)
+                .toList();
         } catch (SQLException e) {
             log.error("Error getting categories", e);
             throw new BaseRuntimeException("Failed to get categories", e);
         }
+    }
+
+    public DeviceCategoryResponse updateCategory(Long id, DeviceCategoryUpdateRequest request) {
+        try {
+            DeviceCategoryEntity existingCategory = findCategoryById(id);
+            mapper.updateEntityFromRequest(request, existingCategory);
+            categoryRepository.update(id, existingCategory);
+            return mapper.toResponse(existingCategory);
+        } catch (SQLException e) {
+            log.error("Error updating category", e);
+            throw new BaseRuntimeException("Failed to update category", e);
+        }
+    }
+
+    public void deleteCategory(Long id) {
+        try {
+            findCategoryById(id);
+            categoryRepository.delete(id);
+        } catch (SQLException e) {
+            log.error("Error deleting category", e);
+            throw new BaseRuntimeException("Failed to delete category", e);
+        }
+    }
+
+    private DeviceCategoryEntity findCategoryById(Long id) throws SQLException {
+        return categoryRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Category not found: " + id));
     }
 }

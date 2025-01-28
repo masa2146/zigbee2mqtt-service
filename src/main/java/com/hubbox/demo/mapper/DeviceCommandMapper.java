@@ -1,7 +1,7 @@
 package com.hubbox.demo.mapper;
 
 import com.hubbox.demo.dto.request.DeviceCommandCreateRequest;
-import com.hubbox.demo.dto.request.DeviceModelUpdateRequest;
+import com.hubbox.demo.dto.request.DeviceCommandUpdateRequest;
 import com.hubbox.demo.dto.response.DeviceCommandResponse;
 import com.hubbox.demo.entities.DeviceCommandEntity;
 import org.mapstruct.Mapper;
@@ -13,6 +13,8 @@ public interface DeviceCommandMapper {
     DeviceCommandMapper INSTANCE = Mappers.getMapper(DeviceCommandMapper.class);
 
     DeviceCommandResponse toResponse(DeviceCommandEntity command);
+
     DeviceCommandEntity toEntity(DeviceCommandCreateRequest request);
-    void updateEntityFromRequest(DeviceModelUpdateRequest request, @MappingTarget DeviceCommandEntity command);
+
+    void updateEntityFromRequest(DeviceCommandUpdateRequest request, @MappingTarget DeviceCommandEntity command);
 }

@@ -8,25 +8,34 @@ import com.google.inject.Singleton;
 import com.google.inject.name.Names;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
+import com.hubbox.demo.Server;
 import com.hubbox.demo.config.CacheConfig;
 import com.hubbox.demo.config.CacheManager;
 import com.hubbox.demo.config.ConfigurationLoaderManager;
 import com.hubbox.demo.config.ConfigurationManager;
+import com.hubbox.demo.config.DataSourceProvider;
+import com.hubbox.demo.config.DatabaseConfig;
 import com.hubbox.demo.config.MqttConfig;
+import com.hubbox.demo.config.SchemaInitializer;
 import com.hubbox.demo.controller.DeviceCategoryController;
 import com.hubbox.demo.controller.DeviceCommandController;
 import com.hubbox.demo.controller.DeviceController;
 import com.hubbox.demo.entities.DeviceCommandEntity;
 import com.hubbox.demo.mapper.DeviceCategoryMapper;
 import com.hubbox.demo.mapper.DeviceCommandMapper;
+import com.hubbox.demo.mapper.DeviceRuleMapper;
 import com.hubbox.demo.repository.DeviceCategoryRepository;
 import com.hubbox.demo.repository.DeviceCommandRepository;
+import com.hubbox.demo.repository.DeviceRuleRepository;
 import com.hubbox.demo.service.DeviceCategoryService;
 import com.hubbox.demo.service.DeviceCommandService;
+import com.hubbox.demo.service.SensorEventManager;
+import com.hubbox.demo.service.DeviceRuleService;
 import com.hubbox.demo.service.DeviceService;
 import com.hubbox.demo.service.MqttService;
 import com.hubbox.demo.util.CacheNames;
 import java.util.List;
+import javax.sql.DataSource;
 
 public class AppModule extends AbstractModule {
     @Override
@@ -36,20 +45,26 @@ public class AppModule extends AbstractModule {
         bind(ObjectMapper.class).toInstance(ObjectMapperFactory.create());
         bind(ConfigurationLoaderManager.class).in(Singleton.class);
         bind(CacheManager.class).in(Singleton.class);
+        bind(DataSource.class).toProvider(DataSourceProvider.class).in(Singleton.class);
+        bind(SchemaInitializer.class).asEagerSingleton();
 
         // Repositories
         bind(DeviceCategoryRepository.class).in(Singleton.class);
         bind(DeviceCommandRepository.class).in(Singleton.class);
+        bind(DeviceRuleRepository.class).in(Singleton.class);
 
         // Mappers
         bind(DeviceCategoryMapper.class).toInstance(DeviceCategoryMapper.INSTANCE);
         bind(DeviceCommandMapper.class).toInstance(DeviceCommandMapper.INSTANCE);
+        bind(DeviceRuleMapper.class).toInstance(DeviceRuleMapper.INSTANCE);
 
         // Services
         bind(MqttService.class).in(Singleton.class);
         bind(DeviceService.class).in(Singleton.class);
         bind(DeviceCategoryService.class).in(Singleton.class);
         bind(DeviceCommandService.class).in(Singleton.class);
+        bind(SensorEventManager.class).in(Singleton.class);
+        bind(DeviceRuleService.class).in(Singleton.class);
 
         // Controller
         bind(DeviceController.class).in(Singleton.class);
@@ -57,6 +72,8 @@ public class AppModule extends AbstractModule {
         bind(DeviceCommandController.class).in(Singleton.class);
 
         bindConstant().annotatedWith(Names.named("serverPort")).to(8080);
+
+        bind(Server.class).in(Singleton.class);
     }
 
     @Provides
@@ -91,5 +108,11 @@ public class AppModule extends AbstractModule {
     @Singleton
     CacheConfig provideCacheConfig(ConfigurationLoaderManager configManager) {
         return configManager.getAppConfig().cache();
+    }
+
+    @Provides
+    @Singleton
+    DatabaseConfig provideDatabaseConfig(ConfigurationLoaderManager configManager) {
+        return configManager.getAppConfig().database();
     }
 }

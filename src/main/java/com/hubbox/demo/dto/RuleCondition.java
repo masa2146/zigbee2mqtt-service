@@ -3,7 +3,8 @@ package com.hubbox.demo.dto;
 import java.util.List;
 
 public record RuleCondition(
-    LogicalOperator operator,
-    List<DeviceCriteria> criteria
+    List<DeviceCriteria> criteria,
+    Long maxTimeDifferenceMs, // Maksimum zaman farkı (milisaniye cinsinden)
+    List<String> requiredDeviceSequence // Sıralı cihaz listesi
 ) {
 }

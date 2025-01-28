@@ -5,6 +5,8 @@ import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubbox.demo.dto.request.DeviceCommandCreateRequest;
+import com.hubbox.demo.dto.request.DeviceCommandUpdateRequest;
+import com.hubbox.demo.dto.request.SendDeviceCommandRequest;
 import com.hubbox.demo.dto.response.DeviceCommandResponse;
 import com.hubbox.demo.service.DeviceCommandService;
 import io.javalin.Javalin;
@@ -29,9 +31,15 @@ public class DeviceCommandController extends AbstractController {
         this.commandService = commandService;
     }
 
+    @Override
     public void registerRoutes(Javalin app) {
         app.post(buildPath(), this::createCommand);
-        app.get(buildPath("{modelId}"), this::getCommandsByModel);
+        app.get(buildPath(), this::getAllCommands);
+        app.get(buildPath("{id}"), this::getCommand);
+        app.get(buildPath("model/{modelId}"), this::getCommandsByModel);
+        app.put(buildPath("{id}"), this::updateCommand);
+        app.delete(buildPath("{id}"), this::deleteCommand);
+        app.post(buildPath("{deviceName}/command"), this::sendCommand);
     }
 
     @OpenApi(
@@ -56,7 +64,45 @@ public class DeviceCommandController extends AbstractController {
     }
 
     @OpenApi(
-        path = CONTEXT_PATH + "/commands/{modelId}",
+        path = CONTEXT_PATH + "/commands",
+        methods = {HttpMethod.GET},
+        summary = "Get all commands",
+        operationId = "getAllCommands",
+        tags = {"Device Commands"},
+        responses = {
+            @OpenApiResponse(
+                status = "200",
+                content = {@OpenApiContent(from = DeviceCommandResponse[].class)}
+            )
+        }
+    )
+    private void getAllCommands(Context ctx) {
+        List<DeviceCommandResponse> responses = commandService.getAllCommands();
+        ctx.json(responses);
+    }
+
+    @OpenApi(
+        path = CONTEXT_PATH + "/commands/{id}",
+        methods = {HttpMethod.GET},
+        summary = "Get command by ID",
+        operationId = "getCommand",
+        tags = {"Device Commands"},
+        pathParams = {
+            @OpenApiParam(name = "id", type = Long.class, description = "Command ID")
+        },
+        responses = {
+            @OpenApiResponse(status = "200", content = {@OpenApiContent(from = DeviceCommandResponse.class)}),
+            @OpenApiResponse(status = "404", description = "Command not found")
+        }
+    )
+    private void getCommand(Context ctx) {
+        Long id = ctx.pathParamAsClass("id", Long.class).get();
+        DeviceCommandResponse response = commandService.getCommand(id);
+        ctx.json(response);
+    }
+
+    @OpenApi(
+        path = CONTEXT_PATH + "/commands/model/{modelId}",
         methods = {HttpMethod.GET},
         summary = "Get commands by model ID",
         operationId = "getCommandsByModel",
@@ -76,5 +122,81 @@ public class DeviceCommandController extends AbstractController {
         String modelId = ctx.pathParam("modelId");
         List<DeviceCommandResponse> commands = commandService.getCommandsByModel(modelId);
         ctx.json(commands);
+    }
+
+    @OpenApi(
+        path = CONTEXT_PATH + "/commands/{id}",
+        methods = {HttpMethod.PUT},
+        summary = "Update an existing device command",
+        operationId = "updateCommand",
+        tags = {"Device Commands"},
+        pathParams = {
+            @OpenApiParam(name = "id", type = Long.class, description = "Command ID")
+        },
+        requestBody = @OpenApiRequestBody(
+            content = {@OpenApiContent(from = DeviceCommandUpdateRequest.class)}
+        ),
+        responses = {
+            @OpenApiResponse(status = "200", content = {@OpenApiContent(from = DeviceCommandResponse.class)}),
+            @OpenApiResponse(status = "400", description = "Invalid request"),
+            @OpenApiResponse(status = "404", description = "Command not found")
+        }
+    )
+    private void updateCommand(Context ctx) {
+        Long id = ctx.pathParamAsClass("id", Long.class).get();
+        DeviceCommandUpdateRequest request = ctx.bodyAsClass(DeviceCommandUpdateRequest.class);
+        DeviceCommandResponse response = commandService.updateCommand(id, request);
+        ctx.json(response);
+    }
+
+    @OpenApi(
+        path = CONTEXT_PATH + "/commands/{id}",
+        methods = {HttpMethod.DELETE},
+        summary = "Delete a device command",
+        operationId = "deleteCommand",
+        tags = {"Device Commands"},
+        pathParams = {
+            @OpenApiParam(name = "id", type = Long.class, description = "Command ID")
+        },
+        responses = {
+            @OpenApiResponse(status = "204", description = "Command deleted successfully"),
+            @OpenApiResponse(status = "404", description = "Command not found")
+        }
+    )
+    private void deleteCommand(Context ctx) {
+        Long id = ctx.pathParamAsClass("id", Long.class).get();
+        commandService.deleteCommand(id);
+        ctx.status(204);
+    }
+
+    @OpenApi(
+        path = CONTEXT_PATH + "/commands/{deviceName}/command",
+        methods = {HttpMethod.POST},
+        summary = "Send command to device",
+        operationId = "sendCommand",
+        tags = {"Device Commands"},
+        pathParams = {
+            @OpenApiParam(name = "deviceName", description = "Name of the device")
+        },
+        requestBody = @OpenApiRequestBody(
+            content = {@OpenApiContent(from = SendDeviceCommandRequest.class)}
+        ),
+        responses = {
+            @OpenApiResponse(status = "200", description = "Command sent successfully"),
+            @OpenApiResponse(status = "404", description = "Device not found"),
+            @OpenApiResponse(status = "400", description = "Invalid command")
+        }
+    )
+    private void sendCommand(Context ctx) {
+        String deviceName = ctx.pathParam("deviceName");
+        SendDeviceCommandRequest request = ctx.bodyAsClass(SendDeviceCommandRequest.class);
+
+        commandService.executeCommand(new SendDeviceCommandRequest(
+            deviceName,
+            request.commandName(),
+            request.parameters()
+        ));
+
+        ctx.status(200).result("Command sent successfully");
     }
 }

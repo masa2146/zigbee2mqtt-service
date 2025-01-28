@@ -23,6 +23,8 @@
         <javalin.version>6.4.0</javalin.version>
         <javalin.openapi.version>6.3.0</javalin.openapi.version>
         <guice.version>5.1.0</guice.version>
+        <h2.version>2.3.232</h2.version>
+        <hikari.version>6.2.1</hikari.version>
     </properties>
 
     <repositories>
@@ -103,6 +105,16 @@
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
             <version>${guice.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>${hikari.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>${h2.version}</version>
         </dependency>
     </dependencies>
 

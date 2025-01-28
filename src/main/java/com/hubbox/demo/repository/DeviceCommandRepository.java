@@ -1,65 +1,31 @@
 package com.hubbox.demo.repository;
 
-import com.google.inject.Singleton;
-import com.hubbox.demo.config.DatabaseConnectionManager;
 import com.hubbox.demo.entities.DeviceCommandEntity;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.sql.DataSource;
 
-@Slf4j
 @Singleton
-public class DeviceCommandRepository {
-    private static final String TABLE_NAME = "device_commands";
+public class DeviceCommandRepository extends BaseCrudRepository<DeviceCommandEntity, Long> {
 
-    public Long create(DeviceCommandEntity command) throws SQLException {
-        String sql = "INSERT INTO " + TABLE_NAME + " (model_id, command_name, command_template, description) VALUES (?, ?, ?, ?)";
-
-        try (Connection conn = DatabaseConnectionManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
-            stmt.setString(1, command.getModelId());
-            stmt.setString(2, command.getCommandName());
-            stmt.setString(3, command.getCommandTemplate());
-            stmt.setString(4, command.getDescription());
-
-            stmt.executeUpdate();
-
-            ResultSet rs = stmt.getGeneratedKeys();
-            if (rs.next()) {
-                Long id = rs.getLong(1);
-                conn.commit();
-                return id;
-            }
-
-            throw new SQLException("Failed to create command, no ID obtained.");
-        }
+    @Inject
+    public DeviceCommandRepository(DataSource dataSource) {
+        super(dataSource);
     }
 
-    public List<DeviceCommandEntity> findByModelId(String modelId) throws SQLException {
-        String sql = "SELECT * FROM " + TABLE_NAME + " WHERE model_id = ?";
-        List<DeviceCommandEntity> commands = new ArrayList<>();
-
-        try (Connection conn = DatabaseConnectionManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, modelId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                commands.add(mapToCommand(rs));
-            }
-        }
-
-        return commands;
+    @Override
+    protected String getTableName() {
+        return "device_commands";
     }
 
-    private DeviceCommandEntity mapToCommand(ResultSet rs) throws SQLException {
+    @Override
+    protected DeviceCommandEntity mapToEntity(ResultSet rs) throws SQLException {
         DeviceCommandEntity command = new DeviceCommandEntity();
         command.setId(rs.getLong("id"));
         command.setModelId(rs.getString("model_id"));
@@ -67,5 +33,60 @@ public class DeviceCommandRepository {
         command.setCommandTemplate(rs.getString("command_template"));
         command.setDescription(rs.getString("description"));
         return command;
+    }
+
+    @Override
+    protected void setInsertParameters(PreparedStatement stmt, DeviceCommandEntity entity) throws SQLException {
+        addParameters(stmt, entity);
+    }
+
+    @Override
+    protected void setUpdateParameters(PreparedStatement stmt, DeviceCommandEntity entity) throws SQLException {
+        addParameters(stmt, entity);
+    }
+
+    @Override
+    protected String getInsertColumns() {
+        return " (model_id, command_name, command_template, description)";
+    }
+
+    @Override
+    protected String getInsertPlaceholders() {
+        return " (?, ?, ?, ?)";
+    }
+
+    @Override
+    protected String getUpdateColumns() {
+        return " model_id = ?, command_name = ?, command_template = ?, description = ?";
+    }
+
+    @Override
+    protected int getUpdateParametersCount() {
+        return 4;
+    }
+
+    public List<DeviceCommandEntity> findByModelId(String modelId) throws SQLException {
+        String sql = "SELECT * FROM " + getTableName() + " WHERE model_id = ?";
+        List<DeviceCommandEntity> commands = new ArrayList<>();
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, modelId);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                commands.add(mapToEntity(rs));
+            }
+        }
+
+        return commands;
+    }
+
+    private void addParameters(PreparedStatement stmt, DeviceCommandEntity entity) throws SQLException {
+        stmt.setString(1, entity.getModelId());
+        stmt.setString(2, entity.getCommandName());
+        stmt.setString(3, entity.getCommandTemplate());
+        stmt.setString(4, entity.getDescription());
     }
 }

@@ -5,6 +5,7 @@ import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubbox.demo.dto.request.DeviceCategoryCreateRequest;
+import com.hubbox.demo.dto.request.DeviceCategoryUpdateRequest;
 import com.hubbox.demo.dto.response.DeviceCategoryResponse;
 import com.hubbox.demo.service.DeviceCategoryService;
 import io.javalin.Javalin;
@@ -29,10 +30,13 @@ public class DeviceCategoryController extends AbstractController {
         this.categoryService = categoryService;
     }
 
+    @Override
     public void registerRoutes(Javalin app) {
         app.post(buildPath(), this::createCategory);
-        app.get(buildPath("{id}"), this::getCategory);
         app.get(buildPath(), this::getAllCategories);
+        app.get(buildPath("{id}"), this::getCategory);
+        app.put(buildPath("{id}"), this::updateCategory);
+        app.delete(buildPath("{id}"), this::deleteCategory);
     }
 
     @OpenApi(
@@ -56,6 +60,24 @@ public class DeviceCategoryController extends AbstractController {
     }
 
     @OpenApi(
+        path = CONTEXT_PATH + "/categories",
+        methods = {HttpMethod.GET},
+        summary = "Get all categories",
+        operationId = "getAllCategories",
+        tags = {"Device Categories"},
+        responses = {
+            @OpenApiResponse(
+                status = "200",
+                content = {@OpenApiContent(from = DeviceCategoryResponse[].class)}
+            )
+        }
+    )
+    private void getAllCategories(Context ctx) {
+        List<DeviceCategoryResponse> responses = categoryService.getAllCategories();
+        ctx.json(responses);
+    }
+
+    @OpenApi(
         path = CONTEXT_PATH + "/categories/{id}",
         methods = {HttpMethod.GET},
         summary = "Get category by ID",
@@ -76,20 +98,47 @@ public class DeviceCategoryController extends AbstractController {
     }
 
     @OpenApi(
-        path = CONTEXT_PATH + "/categories",
-        methods = {HttpMethod.GET},
-        summary = "Get all categories",
-        operationId = "getAllCategories",
+        path = CONTEXT_PATH + "/categories/{id}",
+        methods = {HttpMethod.PUT},
+        summary = "Update an existing device category",
+        operationId = "updateCategory",
         tags = {"Device Categories"},
+        pathParams = {
+            @OpenApiParam(name = "id", type = Long.class, description = "Category ID")
+        },
+        requestBody = @OpenApiRequestBody(
+            content = {@OpenApiContent(from = DeviceCategoryUpdateRequest.class)}
+        ),
         responses = {
-            @OpenApiResponse(
-                status = "200",
-                content = {@OpenApiContent(from = DeviceCategoryResponse[].class)}
-            )
+            @OpenApiResponse(status = "200", content = {@OpenApiContent(from = DeviceCategoryResponse.class)}),
+            @OpenApiResponse(status = "400", description = "Invalid request"),
+            @OpenApiResponse(status = "404", description = "Category not found")
         }
     )
-    private void getAllCategories(Context ctx) {
-        List<DeviceCategoryResponse> responses = categoryService.getAllCategories();
-        ctx.json(responses);
+    private void updateCategory(Context ctx) {
+        Long id = ctx.pathParamAsClass("id", Long.class).get();
+        DeviceCategoryUpdateRequest request = ctx.bodyAsClass(DeviceCategoryUpdateRequest.class);
+        DeviceCategoryResponse response = categoryService.updateCategory(id, request);
+        ctx.json(response);
+    }
+
+    @OpenApi(
+        path = CONTEXT_PATH + "/categories/{id}",
+        methods = {HttpMethod.DELETE},
+        summary = "Delete a device category",
+        operationId = "deleteCategory",
+        tags = {"Device Categories"},
+        pathParams = {
+            @OpenApiParam(name = "id", type = Long.class, description = "Category ID")
+        },
+        responses = {
+            @OpenApiResponse(status = "204", description = "Category deleted successfully"),
+            @OpenApiResponse(status = "404", description = "Category not found")
+        }
+    )
+    private void deleteCategory(Context ctx) {
+        Long id = ctx.pathParamAsClass("id", Long.class).get();
+        categoryService.deleteCategory(id);
+        ctx.status(204);
     }
 }

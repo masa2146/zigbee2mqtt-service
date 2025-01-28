@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Singleton
-public class MqttService {
+public class MqttService implements AutoCloseable {
 
     private final Mqtt3AsyncClient client;
     private final MqttConfig mqttConfig;
@@ -85,7 +85,8 @@ public class MqttService {
 
         topicListeners.forEach((topicFilter, listener) -> {
             if (topic.matches(topicFilter.replace("#", ".*"))) {
-                listener.onMessage(topic, payload);
+                String topicName = topic.replace(mqttConfig.topicFilter(), "");
+                listener.onMessage(topicName, payload);
             }
         });
     }
@@ -121,7 +122,8 @@ public class MqttService {
         });
     }
 
-    public void disconnect() {
+    @Override
+    public void close() throws Exception {
         client.disconnect()
             .whenComplete((v, throwable) -> {
                 if (throwable != null) {
