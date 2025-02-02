@@ -39,7 +39,7 @@ public class DeviceCommandController extends AbstractController {
         app.get(buildPath("model/{modelId}"), this::getCommandsByModel);
         app.put(buildPath("{id}"), this::updateCommand);
         app.delete(buildPath("{id}"), this::deleteCommand);
-        app.post(buildPath("{deviceName}/command"), this::sendCommand);
+        app.post(buildPath("send"), this::sendCommand);
     }
 
     @OpenApi(
@@ -170,14 +170,11 @@ public class DeviceCommandController extends AbstractController {
     }
 
     @OpenApi(
-        path = CONTEXT_PATH + "/commands/{deviceName}/command",
+        path = CONTEXT_PATH + "/commands/send",
         methods = {HttpMethod.POST},
         summary = "Send command to device",
         operationId = "sendCommand",
         tags = {"Device Commands"},
-        pathParams = {
-            @OpenApiParam(name = "deviceName", description = "Name of the device")
-        },
         requestBody = @OpenApiRequestBody(
             content = {@OpenApiContent(from = SendDeviceCommandRequest.class)}
         ),
@@ -188,14 +185,9 @@ public class DeviceCommandController extends AbstractController {
         }
     )
     private void sendCommand(Context ctx) {
-        String deviceName = ctx.pathParam("deviceName");
         SendDeviceCommandRequest request = ctx.bodyAsClass(SendDeviceCommandRequest.class);
 
-        commandService.executeCommand(new SendDeviceCommandRequest(
-            deviceName,
-            request.commandName(),
-            request.parameters()
-        ));
+        commandService.executeCommand(request);
 
         ctx.status(200).result("Command sent successfully");
     }

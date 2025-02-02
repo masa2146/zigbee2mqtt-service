@@ -13,6 +13,7 @@ import com.hubbox.demo.dto.response.DeviceResponse;
 import com.hubbox.demo.entities.DeviceCommandEntity;
 import com.hubbox.demo.exceptions.BaseRuntimeException;
 import com.hubbox.demo.exceptions.CommandExecutionException;
+import com.hubbox.demo.exceptions.RecordNotFoundException;
 import com.hubbox.demo.mapper.DeviceCommandMapper;
 import com.hubbox.demo.repository.DeviceCommandRepository;
 import java.sql.SQLException;
@@ -66,7 +67,7 @@ public class DeviceCommandService {
         try {
             DeviceCommandEntity commandById = findCommandById(id);
             return mapper.toResponse(commandById);
-        } catch (SQLException e) {
+        } catch (SQLException | RecordNotFoundException e) {
             log.error("Error getting command", e);
             throw new BaseRuntimeException("Failed to get command", e);
         }
@@ -105,7 +106,7 @@ public class DeviceCommandService {
             commandCache.invalidate(existingCommand.getModelId());
 
             return mapper.toResponse(existingCommand);
-        } catch (SQLException e) {
+        } catch (SQLException | RecordNotFoundException e) {
             log.error("Error updating command", e);
             throw new BaseRuntimeException("Failed to update command", e);
         }
@@ -116,7 +117,7 @@ public class DeviceCommandService {
             DeviceCommandEntity existingCommand = findCommandById(id);
             commandRepository.delete(id);
             commandCache.invalidate(existingCommand.getModelId());
-        } catch (SQLException e) {
+        } catch (SQLException | RecordNotFoundException e) {
             log.error("Error deleting command", e);
             throw new BaseRuntimeException("Failed to delete command", e);
         }
@@ -190,8 +191,8 @@ public class DeviceCommandService {
         }
     }
 
-    private DeviceCommandEntity findCommandById(Long id) throws SQLException {
+    private DeviceCommandEntity findCommandById(Long id) throws SQLException, RecordNotFoundException {
         return commandRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Command not found: " + id));
+            .orElseThrow(() -> new RecordNotFoundException("Command not found: " + id));
     }
 }

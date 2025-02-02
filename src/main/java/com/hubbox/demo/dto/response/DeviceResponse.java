@@ -5,6 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record DeviceResponse(
 
+    @JsonProperty("id")
+    Long id,
+
     @JsonProperty("disabled")
     Boolean disabled,
 

@@ -1,6 +1,7 @@
-CREATE TABLE IF NOT EXISTS device_categories (id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                              category_name VARCHAR(255) NOT NULL,
-                                              description VARCHAR(500));
+CREATE TABLE IF NOT EXISTS devices (id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                              disabled BOOLEAN DEFAULT FALSE,
+                                              friendly_name VARCHAR(255) NOT NULL,
+                                              model_id VARCHAR(255) NOT NULL);
 
 CREATE TABLE IF NOT EXISTS device_commands (id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                             model_id VARCHAR(255) NOT NULL,

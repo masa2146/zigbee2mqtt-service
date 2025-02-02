@@ -4,8 +4,8 @@ import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.hubbox.demo.dto.request.CreateDeviceRuleRequest;
-import com.hubbox.demo.dto.request.UpdateDeviceRuleRequest;
+import com.hubbox.demo.dto.request.DeviceRuleCreateRequest;
+import com.hubbox.demo.dto.request.DeviceRuleUpdateRequest;
 import com.hubbox.demo.dto.response.DeviceRuleResponse;
 import com.hubbox.demo.service.DeviceRuleService;
 import io.javalin.Javalin;
@@ -46,7 +46,7 @@ public class DeviceRuleController extends AbstractController {
         operationId = "createRule",
         tags = {"Device Rules"},
         requestBody = @OpenApiRequestBody(
-            content = {@OpenApiContent(from = CreateDeviceRuleRequest.class)}
+            content = {@OpenApiContent(from = DeviceRuleCreateRequest.class)}
         ),
         responses = {
             @OpenApiResponse(status = "201", content = {@OpenApiContent(from = DeviceRuleResponse.class)}),
@@ -54,7 +54,7 @@ public class DeviceRuleController extends AbstractController {
         }
     )
     private void createRule(Context ctx) {
-        CreateDeviceRuleRequest request = ctx.bodyAsClass(CreateDeviceRuleRequest.class);
+        DeviceRuleCreateRequest request = ctx.bodyAsClass(DeviceRuleCreateRequest.class);
         DeviceRuleResponse response = ruleService.createRule(request);
         ctx.status(201).json(response);
     }
@@ -107,7 +107,7 @@ public class DeviceRuleController extends AbstractController {
             @OpenApiParam(name = "id", type = Long.class, description = "Rule ID")
         },
         requestBody = @OpenApiRequestBody(
-            content = {@OpenApiContent(from = UpdateDeviceRuleRequest.class)}
+            content = {@OpenApiContent(from = DeviceRuleUpdateRequest.class)}
         ),
         responses = {
             @OpenApiResponse(status = "200", content = {@OpenApiContent(from = DeviceRuleResponse.class)}),
@@ -117,7 +117,7 @@ public class DeviceRuleController extends AbstractController {
     )
     private void updateRule(Context ctx) {
         Long id = ctx.pathParamAsClass("id", Long.class).get();
-        UpdateDeviceRuleRequest request = ctx.bodyAsClass(UpdateDeviceRuleRequest.class);
+        DeviceRuleUpdateRequest request = ctx.bodyAsClass(DeviceRuleUpdateRequest.class);
         DeviceRuleResponse response = ruleService.updateRule(id, request);
         ctx.json(response);
     }

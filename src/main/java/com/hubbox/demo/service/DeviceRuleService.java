@@ -1,17 +1,19 @@
 package com.hubbox.demo.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubbox.demo.dto.DeviceCriteria;
 import com.hubbox.demo.dto.DeviceDataSnapshot;
 import com.hubbox.demo.dto.RuleAction;
 import com.hubbox.demo.dto.RuleCondition;
-import com.hubbox.demo.dto.request.CreateDeviceRuleRequest;
+import com.hubbox.demo.dto.request.DeviceRuleCreateRequest;
+import com.hubbox.demo.dto.request.DeviceRuleUpdateRequest;
 import com.hubbox.demo.dto.request.SendDeviceCommandRequest;
-import com.hubbox.demo.dto.request.UpdateDeviceRuleRequest;
 import com.hubbox.demo.dto.response.DeviceRuleResponse;
 import com.hubbox.demo.entities.DeviceRuleEntity;
 import com.hubbox.demo.exceptions.BaseRuntimeException;
+import com.hubbox.demo.exceptions.RecordNotFoundException;
 import com.hubbox.demo.listener.SensorEventListener;
 import com.hubbox.demo.mapper.DeviceRuleMapper;
 import com.hubbox.demo.repository.DeviceRuleRepository;
@@ -24,22 +26,26 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Singleton
 public class DeviceRuleService implements SensorEventListener {
+    private static final String ALL_RULES_CACHE_KEY = "all";
     private final Map<String, DeviceDataSnapshot> lastDeviceData = new ConcurrentHashMap<>();
     private final DeviceRuleRepository ruleRepository;
     private final DeviceCommandService deviceCommandService;
     private final DeviceRuleMapper mapper;
+    private final Cache<String, List<DeviceRuleEntity>> ruleCache;
 
     @Inject
     public DeviceRuleService(DeviceRuleRepository ruleRepository,
                              DeviceCommandService deviceCommandService,
-                             DeviceRuleMapper mapper) {
+                             DeviceRuleMapper mapper, Cache<String, List<DeviceRuleEntity>> ruleCache) {
         this.ruleRepository = ruleRepository;
         this.deviceCommandService = deviceCommandService;
         this.mapper = mapper;
+        this.ruleCache = ruleCache;
     }
 
-    public DeviceRuleResponse createRule(CreateDeviceRuleRequest request) {
+    public DeviceRuleResponse createRule(DeviceRuleCreateRequest request) {
         try {
+            validateMaxDifference(request);
             DeviceRuleEntity rule = mapper.toEntity(request);
             Long id = ruleRepository.create(rule);
             rule.setId(id);
@@ -54,31 +60,24 @@ public class DeviceRuleService implements SensorEventListener {
         try {
             DeviceRuleEntity ruleEntity = findRuleById(id);
             return mapper.toResponse(ruleEntity);
-        } catch (SQLException e) {
+        } catch (SQLException | RecordNotFoundException e) {
             log.error("Failed to get rule", e);
             throw new BaseRuntimeException("Failed to get rule", e);
         }
     }
 
     public List<DeviceRuleResponse> getAllRules() {
-        try {
-            return ruleRepository.findAll().stream()
-                .map(mapper::toResponse)
-                .toList();
-        } catch (SQLException e) {
-            log.error("Failed to get rules", e);
-            throw new BaseRuntimeException("Failed to get rules", e);
-        }
+        return getAllRulesWithCache().stream().map(mapper::toResponse).toList();
     }
 
-    public DeviceRuleResponse updateRule(Long id, UpdateDeviceRuleRequest request) {
+    public DeviceRuleResponse updateRule(Long id, DeviceRuleUpdateRequest request) {
         try {
             DeviceRuleEntity existingRule = findRuleById(id);
             mapper.updateEntityFromRequest(request, existingRule);
             ruleRepository.update(id, existingRule);
 
             return mapper.toResponse(existingRule);
-        } catch (SQLException e) {
+        } catch (SQLException | RecordNotFoundException e) {
             log.error("Failed to update rule", e);
             throw new BaseRuntimeException("Failed to update rule", e);
         }
@@ -88,26 +87,41 @@ public class DeviceRuleService implements SensorEventListener {
         try {
             findRuleById(id);
             ruleRepository.delete(id);
-        } catch (SQLException e) {
+        } catch (SQLException | RecordNotFoundException e) {
             log.error("Failed to delete rule", e);
             throw new BaseRuntimeException("Failed to delete rule", e);
         }
     }
 
-    public void processDeviceUpdate(String deviceId, Map<String, Object> deviceData) {
+    private List<DeviceRuleEntity> getAllRulesWithCache() {
+        return ruleCache.get(ALL_RULES_CACHE_KEY, key -> {
+            try {
+                return ruleRepository.findAll();
+            } catch (SQLException e) {
+                log.error("Failed to get rules", e);
+                throw new BaseRuntimeException("Failed to get rules", e);
+            }
+        });
+    }
+
+    public void processDeviceUpdate(String deviceName, Map<String, Object> deviceData) {
         try {
+            List<DeviceRuleEntity> activeRules = getAllRulesWithCache();
+            if (!isExistDeviceNameInCriteria(activeRules, deviceName)) {
+                return;
+            }
+
             // Güncel veriyi kaydet
             DeviceDataSnapshot currentSnapshot = new DeviceDataSnapshot(
-                deviceId,
+                deviceName,
                 deviceData,
                 System.currentTimeMillis()
             );
-            lastDeviceData.put(deviceId, currentSnapshot);
+            lastDeviceData.put(deviceName, currentSnapshot);
 
-            List<DeviceRuleEntity> activeRules = ruleRepository.findAll();
 
             activeRules.stream()
-                .filter(this::isComplexRuleTriggered)
+                .filter(this::isRuleTriggered)
                 .forEach(rule -> {
                     log.debug("Complex Rule triggered: {}", rule.getId());
                     executeRuleAction(rule.getAction());
@@ -117,15 +131,24 @@ public class DeviceRuleService implements SensorEventListener {
         }
     }
 
-    private boolean isComplexRuleTriggered(DeviceRuleEntity rule) {
+    @Override
+    public void onDeviceDataReceived(String deviceName, Map<String, Object> data) {
+        processDeviceUpdate(deviceName, data);
+    }
+
+    private boolean isExistDeviceNameInCriteria(List<DeviceRuleEntity> activeRules, String deviceName) {
+        return activeRules.stream()
+            .anyMatch(deviceRuleEntity -> deviceRuleEntity.getCondition().requiredDeviceSequence().contains(deviceName));
+    }
+
+    private boolean isRuleTriggered(DeviceRuleEntity rule) {
         RuleCondition condition = rule.getCondition();
 
         // Sıralı cihaz listesini kontrol et
         List<String> requiredDevices = condition.requiredDeviceSequence();
 
         // Tüm gerekli cihazların verisi var mı?
-        boolean allDevicesPresent = requiredDevices.stream()
-            .allMatch(lastDeviceData::containsKey);
+        boolean allDevicesPresent = requiredDevices.stream().allMatch(lastDeviceData::containsKey);
 
         if (!allDevicesPresent) {
             return false;
@@ -135,26 +158,21 @@ public class DeviceRuleService implements SensorEventListener {
         List<DeviceDataSnapshot> relevantSnapshots = requiredDevices.stream().map(lastDeviceData::get).toList();
 
         // İlk ve son snapshot arasındaki zaman farkını hesapla
-        long timeDifference = relevantSnapshots.get(relevantSnapshots.size() - 1).timestamp()
-            - relevantSnapshots.get(0).timestamp();
+        long timeDifference = relevantSnapshots.get(relevantSnapshots.size() - 1).timestamp() - relevantSnapshots.get(0).timestamp();
 
-        if (timeDifference > condition.maxTimeDifferenceMs()) {
+        if (condition.maxTimeDifferenceMs() != null && timeDifference > condition.maxTimeDifferenceMs()) {
             return false;
         }
 
+
         // Tüm kriterleri kontrol et
-        return relevantSnapshots.stream()
-            .allMatch(snapshot ->
-                evaluateDeviceCriteria(snapshot, condition.criteria())
-            );
+        return relevantSnapshots.stream().allMatch(snapshot -> evaluateDeviceCriteria(snapshot, condition.criteria())
+        );
     }
 
-    private boolean evaluateDeviceCriteria(
-        DeviceDataSnapshot snapshot,
-        List<DeviceCriteria> criteriaList
-    ) {
+    private boolean evaluateDeviceCriteria(DeviceDataSnapshot snapshot, List<DeviceCriteria> criteriaList) {
         return criteriaList.stream()
-            .filter(c -> c.deviceId().equals(snapshot.deviceId()))
+            .filter(c -> c.deviceName().equals(snapshot.deviceName()))
             .allMatch(criteria -> {
                 Object actualValue = snapshot.data().get(criteria.field());
                 if (actualValue == null) {
@@ -167,22 +185,25 @@ public class DeviceRuleService implements SensorEventListener {
 
     private void executeRuleAction(RuleAction action) {
         try {
-            log.debug("Executing rule action: target={}, command={}",
-                action.targetDeviceId(), action.commandName());
+            log.debug("Executing rule action: target={}, command={}", action.targetDeviceName(), action.commandName());
             SendDeviceCommandRequest commandRequest = mapper.toDeviceCommandRequest(action);
             deviceCommandService.executeCommand(commandRequest);
         } catch (Exception e) {
-            log.error("Error executing rule action for device: {}", action.targetDeviceId(), e);
+            log.error("Error executing rule action for device: {}", action.targetDeviceName(), e);
         }
     }
 
-    private DeviceRuleEntity findRuleById(Long id) throws SQLException {
-        return ruleRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Rule not found: " + id));
+    private DeviceRuleEntity findRuleById(Long id) throws SQLException, RecordNotFoundException {
+        return ruleRepository.findById(id).orElseThrow(() -> new RecordNotFoundException("Rule not found: " + id));
     }
 
-    @Override
-    public void onDeviceDataReceived(String deviceId, Map<String, Object> data) {
-        processDeviceUpdate(deviceId, data);
+    private void validateMaxDifference(DeviceRuleCreateRequest request) {
+        if (request.condition().maxTimeDifferenceMs() != null && request.condition().criteria().size() == 1) {
+            throw new BaseRuntimeException("Time difference can only be used with multiple criteria");
+        }
+
+        if (request.condition().maxTimeDifferenceMs() == null && request.condition().criteria().size() > 1) {
+            throw new BaseRuntimeException("Multiple criteria require a time difference");
+        }
     }
 }

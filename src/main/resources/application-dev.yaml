@@ -1,6 +1,6 @@
 contextPath: /api/v1
 database:
-    url: jdbc:h2:mem:devicecommands;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:file:~/devicecommands;AUTO_RECONNECT=TRUE;AUTO_SERVER=TRUE
     username: sa
     password:
 mqtt:
@@ -19,15 +19,9 @@ cache:
       timeUnit: HOURS
       maximumSize: 1000
       recordStats: true
-    deviceCategories:
-      expireAfterWrite: 30
-      timeUnit: MINUTES
+    deviceRules:
+      expireAfterWrite: 1
+      timeUnit: HOURS
       maximumSize: 100
       recordStats: true
       softValues: true
-    deviceModels:
-      expireAfterWrite: 2
-      timeUnit: HOURS
-      maximumSize: 1000
-      recordStats: true
-      weakKeys: true

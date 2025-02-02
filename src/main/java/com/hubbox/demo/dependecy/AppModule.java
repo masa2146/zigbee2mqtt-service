@@ -17,22 +17,21 @@ import com.hubbox.demo.config.DataSourceProvider;
 import com.hubbox.demo.config.DatabaseConfig;
 import com.hubbox.demo.config.MqttConfig;
 import com.hubbox.demo.config.SchemaInitializer;
-import com.hubbox.demo.controller.DeviceCategoryController;
 import com.hubbox.demo.controller.DeviceCommandController;
 import com.hubbox.demo.controller.DeviceController;
 import com.hubbox.demo.entities.DeviceCommandEntity;
-import com.hubbox.demo.mapper.DeviceCategoryMapper;
+import com.hubbox.demo.entities.DeviceRuleEntity;
 import com.hubbox.demo.mapper.DeviceCommandMapper;
+import com.hubbox.demo.mapper.DeviceMapper;
 import com.hubbox.demo.mapper.DeviceRuleMapper;
-import com.hubbox.demo.repository.DeviceCategoryRepository;
 import com.hubbox.demo.repository.DeviceCommandRepository;
+import com.hubbox.demo.repository.DeviceRepository;
 import com.hubbox.demo.repository.DeviceRuleRepository;
-import com.hubbox.demo.service.DeviceCategoryService;
 import com.hubbox.demo.service.DeviceCommandService;
-import com.hubbox.demo.service.SensorEventManager;
 import com.hubbox.demo.service.DeviceRuleService;
 import com.hubbox.demo.service.DeviceService;
 import com.hubbox.demo.service.MqttService;
+import com.hubbox.demo.service.SensorEventManager;
 import com.hubbox.demo.util.CacheNames;
 import java.util.List;
 import javax.sql.DataSource;
@@ -49,26 +48,24 @@ public class AppModule extends AbstractModule {
         bind(SchemaInitializer.class).asEagerSingleton();
 
         // Repositories
-        bind(DeviceCategoryRepository.class).in(Singleton.class);
         bind(DeviceCommandRepository.class).in(Singleton.class);
         bind(DeviceRuleRepository.class).in(Singleton.class);
+        bind(DeviceRepository.class).in(Singleton.class);
 
         // Mappers
-        bind(DeviceCategoryMapper.class).toInstance(DeviceCategoryMapper.INSTANCE);
         bind(DeviceCommandMapper.class).toInstance(DeviceCommandMapper.INSTANCE);
         bind(DeviceRuleMapper.class).toInstance(DeviceRuleMapper.INSTANCE);
+        bind(DeviceMapper.class).toInstance(DeviceMapper.INSTANCE);
 
         // Services
         bind(MqttService.class).in(Singleton.class);
         bind(DeviceService.class).in(Singleton.class);
-        bind(DeviceCategoryService.class).in(Singleton.class);
         bind(DeviceCommandService.class).in(Singleton.class);
         bind(SensorEventManager.class).in(Singleton.class);
         bind(DeviceRuleService.class).in(Singleton.class);
 
         // Controller
         bind(DeviceController.class).in(Singleton.class);
-        bind(DeviceCategoryController.class).in(Singleton.class);
         bind(DeviceCommandController.class).in(Singleton.class);
 
         bindConstant().annotatedWith(Names.named("serverPort")).to(8080);
@@ -81,6 +78,13 @@ public class AppModule extends AbstractModule {
     Cache<String, List<DeviceCommandEntity>> provideDeviceCommandCache(CacheManager cacheManager) {
         return cacheManager.getCache(CacheNames.DEVICE_COMMANDS);
     }
+
+    @Provides
+    @Singleton
+    Cache<String, List<DeviceRuleEntity>> provideDeviceRuleCache(CacheManager cacheManager) {
+        return cacheManager.getCache(CacheNames.DEVICE_RULES);
+    }
+
 
     @Provides
     @Singleton

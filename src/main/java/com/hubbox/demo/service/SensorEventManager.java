@@ -36,7 +36,7 @@ public class SensorEventManager implements AutoCloseable {
         eventListeners.add(listener);
     }
 
-    public void publishEvent(String deviceId, Map<String, Object> data) {
+    public void publishEvent(String deviceName, Map<String, Object> data) {
         if (eventListeners.isEmpty()) {
             return;
         }
@@ -44,9 +44,9 @@ public class SensorEventManager implements AutoCloseable {
         executorService.execute(() -> {
             for (SensorEventListener listener : eventListeners) {
                 try {
-                    listener.onDeviceDataReceived(deviceId, data);
+                    listener.onDeviceDataReceived(deviceName, data);
                 } catch (Exception e) {
-                    log.error("Error processing event for device: {}", deviceId, e);
+                    log.error("Error processing event for device: {}", deviceName, e);
                 }
             }
         });

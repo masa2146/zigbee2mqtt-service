@@ -5,7 +5,6 @@ import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import com.hubbox.demo.controller.DeviceCategoryController;
 import com.hubbox.demo.controller.DeviceCommandController;
 import com.hubbox.demo.controller.DeviceController;
 import com.hubbox.demo.controller.DeviceRuleController;
@@ -22,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 public class Server implements AutoCloseable {
     private final Javalin app;
     private final int port;
-    private final DeviceCategoryController categoryController;
     private final DeviceCommandController commandController;
     private final DeviceController deviceController;
     private final DeviceRuleController deviceRuleController;
@@ -30,11 +28,9 @@ public class Server implements AutoCloseable {
     @Inject
     public Server(
         @Named("serverPort") int port,
-        DeviceCategoryController categoryController,
         DeviceCommandController commandController,
         DeviceController deviceController, DeviceRuleController deviceRuleController) {
         this.port = port;
-        this.categoryController = categoryController;
         this.commandController = commandController;
         this.deviceController = deviceController;
         this.deviceRuleController = deviceRuleController;
@@ -74,21 +70,20 @@ public class Server implements AutoCloseable {
     }
 
     private void configureRoutes() {
-        categoryController.registerRoutes(app);
         commandController.registerRoutes(app);
         deviceController.registerRoutes(app);
         deviceRuleController.registerRoutes(app);
     }
 
     private void configureExceptionHandling() {
-        app.exception(BaseRuntimeException.class, (e, ctx) -> {
-            log.error("Runtime error", e);
-            ctx.status(400).json(new ErrorResponse(400, "Server Error", e.getMessage()));
-        });
-
         app.exception(RecordNotFoundException.class, (e, ctx) -> {
             log.error("Record not found", e);
             ctx.status(404).json(new ErrorResponse(404, "Not Found", e.getMessage()));
+        });
+
+        app.exception(BaseRuntimeException.class, (e, ctx) -> {
+            log.error("Runtime error", e);
+            ctx.status(400).json(new ErrorResponse(400, "Server Error", e.getMessage()));
         });
 
         app.exception(Exception.class, (e, ctx) -> {
