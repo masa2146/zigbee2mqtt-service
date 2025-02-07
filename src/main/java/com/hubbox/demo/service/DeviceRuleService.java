@@ -7,6 +7,7 @@ import com.hubbox.demo.dto.DeviceCriteria;
 import com.hubbox.demo.dto.DeviceDataSnapshot;
 import com.hubbox.demo.dto.RuleAction;
 import com.hubbox.demo.dto.RuleCondition;
+import com.hubbox.demo.dto.request.ActivateRequest;
 import com.hubbox.demo.dto.request.DeviceRuleCreateRequest;
 import com.hubbox.demo.dto.request.DeviceRuleUpdateRequest;
 import com.hubbox.demo.dto.request.SendDeviceCommandRequest;
@@ -30,15 +31,17 @@ public class DeviceRuleService implements SensorEventListener {
     private final Map<String, DeviceDataSnapshot> lastDeviceData = new ConcurrentHashMap<>();
     private final DeviceRuleRepository ruleRepository;
     private final DeviceCommandService deviceCommandService;
+    private final PinService pinService;
     private final DeviceRuleMapper mapper;
     private final Cache<String, List<DeviceRuleEntity>> ruleCache;
 
     @Inject
     public DeviceRuleService(DeviceRuleRepository ruleRepository,
-                             DeviceCommandService deviceCommandService,
+                             DeviceCommandService deviceCommandService, PinService pinService,
                              DeviceRuleMapper mapper, Cache<String, List<DeviceRuleEntity>> ruleCache) {
         this.ruleRepository = ruleRepository;
         this.deviceCommandService = deviceCommandService;
+        this.pinService = pinService;
         this.mapper = mapper;
         this.ruleCache = ruleCache;
     }
@@ -47,12 +50,13 @@ public class DeviceRuleService implements SensorEventListener {
         try {
             validateMaxDifference(request);
             DeviceRuleEntity rule = mapper.toEntity(request);
+            rule.setEnabled(false);
             Long id = ruleRepository.create(rule);
             rule.setId(id);
             return mapper.toResponse(rule);
         } catch (SQLException e) {
-            log.error("Failed to create rule", e);
-            throw new BaseRuntimeException("Failed to create rule", e);
+            log.error("Failed newName create rule", e);
+            throw new BaseRuntimeException("Failed newName create rule", e);
         }
     }
 
@@ -61,8 +65,8 @@ public class DeviceRuleService implements SensorEventListener {
             DeviceRuleEntity ruleEntity = findRuleById(id);
             return mapper.toResponse(ruleEntity);
         } catch (SQLException | RecordNotFoundException e) {
-            log.error("Failed to get rule", e);
-            throw new BaseRuntimeException("Failed to get rule", e);
+            log.error("Failed newName get rule", e);
+            throw new BaseRuntimeException("Failed newName get rule", e);
         }
     }
 
@@ -78,8 +82,8 @@ public class DeviceRuleService implements SensorEventListener {
 
             return mapper.toResponse(existingRule);
         } catch (SQLException | RecordNotFoundException e) {
-            log.error("Failed to update rule", e);
-            throw new BaseRuntimeException("Failed to update rule", e);
+            log.error("Failed newName update rule", e);
+            throw new BaseRuntimeException("Failed newName update rule", e);
         }
     }
 
@@ -88,8 +92,8 @@ public class DeviceRuleService implements SensorEventListener {
             findRuleById(id);
             ruleRepository.delete(id);
         } catch (SQLException | RecordNotFoundException e) {
-            log.error("Failed to delete rule", e);
-            throw new BaseRuntimeException("Failed to delete rule", e);
+            log.error("Failed newName delete rule", e);
+            throw new BaseRuntimeException("Failed newName delete rule", e);
         }
     }
 
@@ -98,15 +102,23 @@ public class DeviceRuleService implements SensorEventListener {
             try {
                 return ruleRepository.findAll();
             } catch (SQLException e) {
-                log.error("Failed to get rules", e);
-                throw new BaseRuntimeException("Failed to get rules", e);
+                log.error("Failed newName get rules", e);
+                throw new BaseRuntimeException("Failed newName get rules", e);
             }
         });
     }
 
+    public void activateRules(ActivateRequest request) throws SQLException {
+        pinService.getPin(request.pinNumber());
+        for (DeviceRuleEntity rule : getAllRulesWithCache()) {
+            rule.setEnabled(request.activate());
+            ruleRepository.update(rule.getId(), rule);
+        }
+    }
+
     public void processDeviceUpdate(String deviceName, Map<String, Object> deviceData) {
         try {
-            List<DeviceRuleEntity> activeRules = getAllRulesWithCache();
+            List<DeviceRuleEntity> activeRules = getAllRulesWithCache().stream().filter(DeviceRuleEntity::getEnabled).toList();
             if (!isExistDeviceNameInCriteria(activeRules, deviceName)) {
                 return;
             }
@@ -123,7 +135,7 @@ public class DeviceRuleService implements SensorEventListener {
             activeRules.stream()
                 .filter(this::isRuleTriggered)
                 .forEach(rule -> {
-                    log.debug("Complex Rule triggered: {}", rule.getId());
+                    log.debug("Rule triggered: {}", rule.getId());
                     executeRuleAction(rule.getAction());
                 });
         } catch (Exception e) {

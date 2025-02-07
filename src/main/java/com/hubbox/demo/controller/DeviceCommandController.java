@@ -172,7 +172,7 @@ public class DeviceCommandController extends AbstractController {
     @OpenApi(
         path = CONTEXT_PATH + "/commands/send",
         methods = {HttpMethod.POST},
-        summary = "Send command to device",
+        summary = "Send command newName device",
         operationId = "sendCommand",
         tags = {"Device Commands"},
         requestBody = @OpenApiRequestBody(

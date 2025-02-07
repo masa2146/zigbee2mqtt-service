@@ -5,8 +5,10 @@ import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubbox.demo.dto.request.DeviceCreateRequest;
+import com.hubbox.demo.dto.request.DeviceRenameRequest;
 import com.hubbox.demo.dto.request.DeviceUpdateRequest;
 import com.hubbox.demo.dto.response.DeviceResponse;
+import com.hubbox.demo.dto.response.ResponseMessage;
 import com.hubbox.demo.exceptions.DeviceNotFoundException;
 import com.hubbox.demo.service.DeviceService;
 import io.javalin.Javalin;
@@ -38,6 +40,8 @@ public class DeviceController extends AbstractController {
         app.get(buildPath(), this::getAllDevices);
         app.get(buildPath("{deviceName}"), this::getDevice);
         app.delete(buildPath("{id}"), this::deleteDevice);
+        app.put(buildPath("rename"), this::renameDevice);
+        app.post(buildPath("permit"), this::permitAll);
     }
 
     @OpenApi(
@@ -98,8 +102,8 @@ public class DeviceController extends AbstractController {
         }
     )
     private void getAllDevices(Context ctx) {
-        List<DeviceResponse> devices = deviceService.getAllDevices();
-        ctx.json(devices);
+        List<DeviceResponse> response = deviceService.getAllDevices();
+        ctx.json(response);
     }
 
     @OpenApi(
@@ -140,5 +144,41 @@ public class DeviceController extends AbstractController {
         String deviceName = ctx.pathParam("deviceName");
         DeviceResponse device = deviceService.getDeviceById(deviceName);
         ctx.json(device);
+    }
+
+    @OpenApi(
+        path = CONTEXT_PATH + "/devices/rename",
+        methods = {HttpMethod.PUT},
+        summary = "Rename a device",
+        operationId = "renameDevice",
+        tags = {"Devices"},
+        requestBody = @OpenApiRequestBody(
+            content = {@OpenApiContent(from = DeviceRenameRequest.class)}
+        ),
+        responses = {
+            @OpenApiResponse(status = "200", content = {@OpenApiContent(from = ResponseMessage.class)}),
+            @OpenApiResponse(status = "400", description = "Invalid request")
+        }
+    )
+    private void renameDevice(Context ctx) {
+        DeviceRenameRequest request = ctx.bodyAsClass(DeviceRenameRequest.class);
+        ResponseMessage response = deviceService.renameDevice(request);
+        ctx.status(200).json(response);
+    }
+
+    @OpenApi(
+        path = CONTEXT_PATH + "/devices/permit",
+        methods = {HttpMethod.POST},
+        summary = "Permit all devices to join the network",
+        operationId = "permitAll",
+        tags = {"Devices"},
+        responses = {
+            @OpenApiResponse(status = "200", content = {@OpenApiContent(from = ResponseMessage.class)}),
+            @OpenApiResponse(status = "400", description = "Invalid request")
+        }
+    )
+    private void permitAll(Context ctx) {
+        ResponseMessage response = deviceService.permitAll();
+        ctx.status(200).json(response);
     }
 }

@@ -6,8 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubbox.demo.dto.request.DeviceCreateRequest;
+import com.hubbox.demo.dto.request.DeviceRenameRequest;
 import com.hubbox.demo.dto.request.DeviceUpdateRequest;
+import com.hubbox.demo.dto.request.PermitRequest;
 import com.hubbox.demo.dto.response.DeviceResponse;
+import com.hubbox.demo.dto.response.ResponseMessage;
 import com.hubbox.demo.entities.DeviceEntity;
 import com.hubbox.demo.exceptions.BaseRuntimeException;
 import com.hubbox.demo.exceptions.DeviceNotFoundException;
@@ -102,6 +105,21 @@ public class DeviceService implements TopicMessageListener, AutoCloseable {
             .filter(device -> device.friendlyName().equals(deviceName))
             .findFirst()
             .orElseThrow(() -> new DeviceNotFoundException("Device not found: " + deviceName));
+    }
+
+    public ResponseMessage renameDevice(DeviceRenameRequest request) {
+        synchronized (deviceList) {
+            deviceList.stream()
+                .filter(device -> device.friendlyName().equals(request.oldName()))
+                .findFirst()
+                .ifPresent(device -> mqttService.sendCommand(DEVICE_TOPIC + "/rename", request.toJson().toJSONString()));
+        }
+        return new ResponseMessage(200, null, "Device renamed successfully");
+    }
+
+    public ResponseMessage permitAll() {
+        mqttService.sendCommand(DEVICE_TOPIC + "/bridge/request/permit_join", new PermitRequest(true).toJson().toJSONString());
+        return new ResponseMessage(200, null, "Permit all devices");
     }
 
     @Override

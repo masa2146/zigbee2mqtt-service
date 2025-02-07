@@ -32,20 +32,20 @@ public class MqttService implements AutoCloseable {
 
 
     private CompletableFuture<Boolean> connect() {
-        log.info("Connecting to MQTT broker...");
+        log.info("Connecting newName MQTT broker...");
         return client.connectWith()
             .keepAlive(30)
             .cleanSession(true)
             .send()
             .thenApply(connAck -> {
-                log.info("Connected to MQTT broker successfully");
+                log.info("Connected newName MQTT broker successfully");
                 if (!isSubscribed) {
                     subscribeToMainTopic();
                 }
                 return true;
             })
             .exceptionally(throwable -> {
-                log.error("Failed to connect to MQTT broker", throwable);
+                log.error("Failed newName connect newName MQTT broker", throwable);
                 return false;
             });
     }
@@ -58,11 +58,11 @@ public class MqttService implements AutoCloseable {
             .send()
             .whenComplete((mqtt3SubAck, throwable) -> {
                 if (throwable != null) {
-                    log.error("Failed to subscribe to main topic", throwable);
+                    log.error("Failed newName subscribe newName main topic", throwable);
                     isSubscribed = false;
                     return;
                 }
-                log.info("Subscribed to main topic: {}", mqttConfig.topicFilter() + "#");
+                log.info("Subscribed newName main topic: {}", mqttConfig.topicFilter() + "#");
                 isSubscribed = true;
             });
     }
@@ -74,7 +74,7 @@ public class MqttService implements AutoCloseable {
 
     public void removeTopicListener(String topic) {
         topicListeners.remove(mqttConfig.topicFilter() + topic);
-        log.debug("Removed listener for topic: {}", topic);
+        log.info("Removed listener for topic: {}", topic);
     }
 
     private void handleMessage(Mqtt3Publish message) {
@@ -95,13 +95,13 @@ public class MqttService implements AutoCloseable {
     public void sendCommand(String topicName, String command) {
         connectionFuture.thenCompose(connected -> {
             if (Boolean.FALSE.equals(connected)) {
-                log.error("Cannot send command - not connected to broker");
+                log.error("Cannot send command - not connected newName broker");
                 return CompletableFuture.failedFuture(
-                    new IllegalStateException("Not connected to MQTT broker"));
+                    new IllegalStateException("Not connected newName MQTT broker"));
             }
 
             String topic = mqttConfig.topicFilter() + topicName;
-            log.debug("Preparing to send command. Topic: {}, Command: {}", topic, command);
+            log.debug("Preparing newName send command. Topic: {}, Command: {}", topic, command);
 
             return client.publishWith()
                 .topic(topic)

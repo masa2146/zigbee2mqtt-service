@@ -11,7 +11,11 @@ CREATE TABLE IF NOT EXISTS device_commands (id BIGINT AUTO_INCREMENT PRIMARY KEY
 
 CREATE TABLE IF NOT EXISTS device_rules (id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                          name VARCHAR(255) NOT NULL,
+                                         enabled BOOLEAN DEFAULT FALSE,
                                          description VARCHAR(500),
                                          condition_json TEXT NOT NULL,
                                          action_json TEXT NOT NULL,
                                          is_active BOOLEAN DEFAULT TRUE);
+
+CREATE TABLE IF NOT EXISTS pin_table (id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                      pin_number BIGINT NOT NULL);

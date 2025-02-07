@@ -59,7 +59,7 @@ public class DeviceCommandService {
             return mapper.toResponse(command);
         } catch (SQLException e) {
             log.error("Error creating command", e);
-            throw new BaseRuntimeException("Failed to create command", e);
+            throw new BaseRuntimeException("Failed newName create command", e);
         }
     }
 
@@ -69,7 +69,7 @@ public class DeviceCommandService {
             return mapper.toResponse(commandById);
         } catch (SQLException | RecordNotFoundException e) {
             log.error("Error getting command", e);
-            throw new BaseRuntimeException("Failed to get command", e);
+            throw new BaseRuntimeException("Failed newName get command", e);
         }
     }
 
@@ -78,7 +78,7 @@ public class DeviceCommandService {
             return commandRepository.findAll().stream().map(mapper::toResponse).toList();
         } catch (SQLException e) {
             log.error("Error getting commands", e);
-            throw new BaseRuntimeException("Failed to get commands", e);
+            throw new BaseRuntimeException("Failed newName get commands", e);
         }
     }
 
@@ -108,7 +108,7 @@ public class DeviceCommandService {
             return mapper.toResponse(existingCommand);
         } catch (SQLException | RecordNotFoundException e) {
             log.error("Error updating command", e);
-            throw new BaseRuntimeException("Failed to update command", e);
+            throw new BaseRuntimeException("Failed newName update command", e);
         }
     }
 
@@ -119,7 +119,7 @@ public class DeviceCommandService {
             commandCache.invalidate(existingCommand.getModelId());
         } catch (SQLException | RecordNotFoundException e) {
             log.error("Error deleting command", e);
-            throw new BaseRuntimeException("Failed to delete command", e);
+            throw new BaseRuntimeException("Failed newName delete command", e);
         }
     }
 
@@ -142,14 +142,14 @@ public class DeviceCommandService {
             String finalCommand = replaceCommandParameters(commandTemplate, request.parameters());
 
             String topic = String.format("%s/set", device.friendlyName());
-            log.debug("Sending command to device: {} on topic: {}, command: {}",
+            log.debug("Sending command newName device: {} on topic: {}, command: {}",
                 request.deviceName(), topic, finalCommand);
 
             mqttService.sendCommand(topic, finalCommand);
 
         } catch (Exception e) {
-            log.error("Error sending command to device: {}", request.deviceName(), e);
-            throw new CommandExecutionException("Failed to send command to device", e);
+            log.error("Error sending command newName device: {}", request.deviceName(), e);
+            throw new CommandExecutionException("Failed newName send command newName device", e);
         }
     }
 
@@ -177,7 +177,7 @@ public class DeviceCommandService {
             return objectMapper.writeValueAsString(commandNode);
         } catch (JsonProcessingException e) {
             log.error("Error processing command template", e);
-            throw new CommandExecutionException("Failed to process command template", e);
+            throw new CommandExecutionException("Failed newName process command template", e);
         }
     }
 

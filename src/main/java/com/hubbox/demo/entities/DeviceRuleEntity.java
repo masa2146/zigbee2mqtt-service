@@ -9,6 +9,7 @@ import lombok.Setter;
 @Setter
 public class DeviceRuleEntity {
     private Long id;
+    private Boolean enabled;
     private String name;
     private String description;
     private RuleCondition condition;

@@ -19,18 +19,22 @@ import com.hubbox.demo.config.MqttConfig;
 import com.hubbox.demo.config.SchemaInitializer;
 import com.hubbox.demo.controller.DeviceCommandController;
 import com.hubbox.demo.controller.DeviceController;
+import com.hubbox.demo.controller.PinController;
 import com.hubbox.demo.entities.DeviceCommandEntity;
 import com.hubbox.demo.entities.DeviceRuleEntity;
 import com.hubbox.demo.mapper.DeviceCommandMapper;
 import com.hubbox.demo.mapper.DeviceMapper;
 import com.hubbox.demo.mapper.DeviceRuleMapper;
+import com.hubbox.demo.mapper.PinMapper;
 import com.hubbox.demo.repository.DeviceCommandRepository;
 import com.hubbox.demo.repository.DeviceRepository;
 import com.hubbox.demo.repository.DeviceRuleRepository;
+import com.hubbox.demo.repository.PinRepository;
 import com.hubbox.demo.service.DeviceCommandService;
 import com.hubbox.demo.service.DeviceRuleService;
 import com.hubbox.demo.service.DeviceService;
 import com.hubbox.demo.service.MqttService;
+import com.hubbox.demo.service.PinService;
 import com.hubbox.demo.service.SensorEventManager;
 import com.hubbox.demo.util.CacheNames;
 import java.util.List;
@@ -51,11 +55,13 @@ public class AppModule extends AbstractModule {
         bind(DeviceCommandRepository.class).in(Singleton.class);
         bind(DeviceRuleRepository.class).in(Singleton.class);
         bind(DeviceRepository.class).in(Singleton.class);
+        bind(PinRepository.class).in(Singleton.class);
 
         // Mappers
         bind(DeviceCommandMapper.class).toInstance(DeviceCommandMapper.INSTANCE);
         bind(DeviceRuleMapper.class).toInstance(DeviceRuleMapper.INSTANCE);
         bind(DeviceMapper.class).toInstance(DeviceMapper.INSTANCE);
+        bind(PinMapper.class).toInstance(PinMapper.INSTANCE);
 
         // Services
         bind(MqttService.class).in(Singleton.class);
@@ -63,10 +69,12 @@ public class AppModule extends AbstractModule {
         bind(DeviceCommandService.class).in(Singleton.class);
         bind(SensorEventManager.class).in(Singleton.class);
         bind(DeviceRuleService.class).in(Singleton.class);
+        bind(PinService.class).in(Singleton.class);
 
         // Controller
         bind(DeviceController.class).in(Singleton.class);
         bind(DeviceCommandController.class).in(Singleton.class);
+        bind(PinController.class).in(Singleton.class);
 
         bindConstant().annotatedWith(Names.named("serverPort")).to(8080);
 

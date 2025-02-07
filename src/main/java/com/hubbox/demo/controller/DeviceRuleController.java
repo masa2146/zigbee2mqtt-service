@@ -4,6 +4,7 @@ import static com.hubbox.demo.util.Constants.CONTEXT_PATH;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.hubbox.demo.dto.request.ActivateRequest;
 import com.hubbox.demo.dto.request.DeviceRuleCreateRequest;
 import com.hubbox.demo.dto.request.DeviceRuleUpdateRequest;
 import com.hubbox.demo.dto.response.DeviceRuleResponse;
@@ -16,6 +17,7 @@ import io.javalin.openapi.OpenApiContent;
 import io.javalin.openapi.OpenApiParam;
 import io.javalin.openapi.OpenApiRequestBody;
 import io.javalin.openapi.OpenApiResponse;
+import java.sql.SQLException;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,6 +39,7 @@ public class DeviceRuleController extends AbstractController {
         app.get(buildPath("{id}"), this::getRule);
         app.put(buildPath("{id}"), this::updateRule);
         app.delete(buildPath("{id}"), this::deleteRule);
+        app.post(buildPath("activate"), this::activateRule);
     }
 
     @OpenApi(
@@ -140,5 +143,25 @@ public class DeviceRuleController extends AbstractController {
         Long id = ctx.pathParamAsClass("id", Long.class).get();
         ruleService.deleteRule(id);
         ctx.status(204);
+    }
+
+    @OpenApi(
+        path = CONTEXT_PATH + "/rules/activate",
+        methods = {HttpMethod.POST},
+        summary = "Activate a device rule",
+        operationId = "activateRule",
+        tags = {"Device Rules"},
+        requestBody = @OpenApiRequestBody(
+            content = {@OpenApiContent(from = ActivateRequest.class)}
+        ),
+        responses = {
+            @OpenApiResponse(status = "200", description = "Rule activated successfully"),
+            @OpenApiResponse(status = "400", description = "Invalid request")
+        }
+    )
+    private void activateRule(Context ctx) throws SQLException {
+        ActivateRequest request = ctx.bodyAsClass(ActivateRequest.class);
+        ruleService.activateRules(request);
+        ctx.status(200);
     }
 }

@@ -6,7 +6,7 @@ public record SendCommandRequest(
     @OpenApiDescription("The model ID of the device")
     String modelId,
 
-    @OpenApiDescription("The command to send")
+    @OpenApiDescription("The command newName send")
     String command
 ) {
 

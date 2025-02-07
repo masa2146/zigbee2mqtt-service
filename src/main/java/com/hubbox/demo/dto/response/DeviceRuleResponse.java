@@ -8,6 +8,7 @@ public record DeviceRuleResponse(
     String name,
     String description,
     RuleCondition condition,
-    RuleAction action
+    RuleAction action,
+    Boolean enabled
 ) {
 }

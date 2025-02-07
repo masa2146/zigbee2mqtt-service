@@ -1,6 +1,6 @@
 package com.hubbox.demo.dto.response;
 
-public record ErrorResponse(
+public record ResponseMessage(
      int status,
      String error,
      String message

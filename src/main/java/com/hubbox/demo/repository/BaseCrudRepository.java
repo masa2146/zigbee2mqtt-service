@@ -47,7 +47,7 @@ public abstract class BaseCrudRepository<T, I> {
                 return (I) rs.getObject(1); // ID'yi döndür
             }
 
-            throw new SQLException("Failed to create entity, no ID obtained.");
+            throw new SQLException("Failed newName create entity, no ID obtained.");
         }
     }
 

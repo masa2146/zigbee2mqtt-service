@@ -57,7 +57,7 @@ public class ConfigurationManager {
             throw new ConfigurationException("No configuration file found for environment: " + env);
 
         } catch (Exception e) {
-            throw new ConfigurationException("Failed to load configuration", e);
+            throw new ConfigurationException("Failed newName load configuration", e);
         }
     }
 
@@ -72,7 +72,7 @@ public class ConfigurationManager {
 
             return instance;
         } catch (Exception e) {
-            throw new ConfigurationException("Failed to convert properties to object", e);
+            throw new ConfigurationException("Failed newName convert properties newName object", e);
         }
     }
 
@@ -106,7 +106,7 @@ public class ConfigurationManager {
             setFieldValue(lastField, currentObject, value);
 
         } catch (Exception e) {
-            log.warn("Failed to set property: {} with value: {}", propertyPath, value, e);
+            log.warn("Failed newName set property: {} with value: {}", propertyPath, value, e);
         }
     }
 
@@ -124,7 +124,7 @@ public class ConfigurationManager {
             Object convertedValue = convertValue(value, fieldType);
             field.set(target, convertedValue);
         } catch (Exception e) {
-            throw new ConfigurationException("Failed to set field value", e);
+            throw new ConfigurationException("Failed newName set field value", e);
         }
     }
 

@@ -8,7 +8,8 @@ import com.google.inject.name.Named;
 import com.hubbox.demo.controller.DeviceCommandController;
 import com.hubbox.demo.controller.DeviceController;
 import com.hubbox.demo.controller.DeviceRuleController;
-import com.hubbox.demo.dto.response.ErrorResponse;
+import com.hubbox.demo.controller.PinController;
+import com.hubbox.demo.dto.response.ResponseMessage;
 import com.hubbox.demo.exceptions.BaseRuntimeException;
 import com.hubbox.demo.exceptions.RecordNotFoundException;
 import io.javalin.Javalin;
@@ -24,16 +25,18 @@ public class Server implements AutoCloseable {
     private final DeviceCommandController commandController;
     private final DeviceController deviceController;
     private final DeviceRuleController deviceRuleController;
+    private final PinController  pinController;
 
     @Inject
     public Server(
         @Named("serverPort") int port,
         DeviceCommandController commandController,
-        DeviceController deviceController, DeviceRuleController deviceRuleController) {
+        DeviceController deviceController, DeviceRuleController deviceRuleController, PinController pinController) {
         this.port = port;
         this.commandController = commandController;
         this.deviceController = deviceController;
         this.deviceRuleController = deviceRuleController;
+        this.pinController = pinController;
 
         this.app = configureJavalin();
         configureRoutes();
@@ -73,22 +76,23 @@ public class Server implements AutoCloseable {
         commandController.registerRoutes(app);
         deviceController.registerRoutes(app);
         deviceRuleController.registerRoutes(app);
+        pinController.registerRoutes(app);
     }
 
     private void configureExceptionHandling() {
         app.exception(RecordNotFoundException.class, (e, ctx) -> {
             log.error("Record not found", e);
-            ctx.status(404).json(new ErrorResponse(404, "Not Found", e.getMessage()));
+            ctx.status(404).json(new ResponseMessage(404, "Not Found", e.getMessage()));
         });
 
         app.exception(BaseRuntimeException.class, (e, ctx) -> {
             log.error("Runtime error", e);
-            ctx.status(400).json(new ErrorResponse(400, "Server Error", e.getMessage()));
+            ctx.status(400).json(new ResponseMessage(400, "Server Error", e.getMessage()));
         });
 
         app.exception(Exception.class, (e, ctx) -> {
             log.error("Unexpected error", e);
-            ctx.status(500).json(new ErrorResponse(500, "Internal Server Error", "An unexpected error occurred"));
+            ctx.status(500).json(new ResponseMessage(500, "Internal Server Error", "An unexpected error occurred"));
         });
     }
 

@@ -7,7 +7,6 @@ public record DeviceRuleUpdateRequest(
     String name,
     String description,
     RuleCondition condition,
-    RuleAction action,
-    Boolean isActive
+    RuleAction action
 ) {
 }

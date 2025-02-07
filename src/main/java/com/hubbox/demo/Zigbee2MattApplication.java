@@ -15,7 +15,7 @@ public class Zigbee2MattApplication {
             application.start();
 
         } catch (Exception e) {
-            log.error("Failed to start application", e);
+            log.error("Failed newName start application", e);
             System.exit(1);
         }
     }

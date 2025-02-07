@@ -38,7 +38,7 @@ public class SchemaInitializer {
             conn.commit();
             log.info("Database schema initialized successfully.");
         } catch (Exception e) {
-            log.error("Failed to initialize database schema: {}", e.getMessage());
+            log.error("Failed newName initialize database schema: {}", e.getMessage());
             throw new BaseRuntimeException("Schema initialization failed", e);
         }
     }
